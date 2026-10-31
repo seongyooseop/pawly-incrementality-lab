@@ -1,0 +1,738 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PAWLY Incrementality Lab</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,0.10);
+  --est: #2a78d6; --est-band: rgba(42,120,214,0.16); --naive: #eb6834; --alt: #1baf7a;
+  --other: #b9b7ae; --shade: #efeee9; --shade-2: #fbe9df; --good: #006300; --bad: #d03b3b;
+  --font: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:where(:not([data-theme="light"])) {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10);
+  --est: #3987e5; --est-band: rgba(57,135,229,0.22); --naive: #d95926; --alt: #199e70;
+  --other: #5b5a55; --shade: #262624; --shade-2: #3a2a22; --good: #0ca30c; --bad: #e66767; } }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10);
+  --est: #3987e5; --est-band: rgba(57,135,229,0.22); --naive: #d95926; --alt: #199e70;
+  --other: #5b5a55; --shade: #262624; --shade-2: #3a2a22; --good: #0ca30c; --bad: #e66767; }
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 22px max(16px, env(safe-area-inset-left)) 56px; display: grid; gap: 18px; }
+h1, h2, h3 { margin: 0; line-height: 1.25; text-wrap: balance; }
+h1 { font-size: clamp(25px, 3.6vw, 32px); }
+h2 { font-size: 19px; }
+h3 { font-size: 15.5px; }
+p { margin: 0; }
+.eyebrow { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.lede { color: var(--ink-2); max-width: 70ch; margin-top: 6px; }
+.badge { display: inline-block; border: 1px solid var(--ring); border-radius: 999px; padding: 3px 10px; font-size: 12.5px; color: var(--ink-2); background: var(--surface); }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; border-block: 1px solid var(--grid); padding-block: 8px; }
+.tabs button { font: inherit; border: 0; background: none; color: var(--ink-2); padding: 6px 11px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--shade); color: var(--ink); }
+button:focus-visible { outline: 2px solid var(--est); outline-offset: 2px; }
+.view { display: grid; gap: 18px; }
+.view[hidden] { display: none; }
+.panel { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 18px; display: grid; gap: 12px; min-width: 0; }
+.two { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 900px) { .two { grid-template-columns: minmax(0, 1fr); } }
+.q { font-size: 17px; font-weight: 650; }
+.answer { border-left: 3px solid var(--est); padding: 2px 0 2px 12px; color: var(--ink); }
+.note { font-size: 13px; color: var(--ink-2); }
+.small { font-size: 12.5px; color: var(--muted); }
+.guide { border: 1px solid var(--ring); border-left: 3px solid var(--est); border-radius: 8px; background: var(--surface); padding: 9px 14px; font-size: 14px; }
+.guide summary { cursor: pointer; font-weight: 600; }
+.guide[open] summary { margin-bottom: 6px; }
+.guide ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.tile { border-left: 3px solid var(--grid); padding: 2px 0 2px 12px; display: grid; gap: 1px; }
+.tile.est { border-color: var(--est); } .tile.naive { border-color: var(--naive); } .tile.truth { border-color: var(--ink); }
+.tile .k { font-size: 12.5px; color: var(--ink-2); }
+.tile .v { font-size: 24px; font-weight: 700; }
+.tile .s { font-size: 12.5px; color: var(--muted); }
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+th { font-size: 11.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); font-weight: 600; white-space: nowrap; }
+td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+tr.hl td { background: var(--shade); }
+.ok { color: var(--good); font-weight: 600; white-space: nowrap; } .miss { color: var(--bad); font-weight: 600; white-space: nowrap; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--ink-2); align-items: center; }
+.sw { display: inline-block; width: 16px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+.sw.dot { width: 9px; height: 9px; border-radius: 50%; }
+.sw.box { height: 10px; border-radius: 2px; }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 3px; border: 1px solid var(--ring); border-radius: 8px; padding: 3px; background: var(--surface); }
+.seg button { font: inherit; font-size: 13px; border: 0; background: none; color: var(--ink-2); padding: 4px 10px; border-radius: 5px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.head { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; justify-content: space-between; }
+svg.chart { width: 100%; height: auto; display: block; overflow: visible; }
+svg.chart text { fill: var(--muted); font-family: var(--font); font-size: 11px; font-variant-numeric: tabular-nums; }
+svg.chart text.lab { fill: var(--ink-2); font-size: 11.5px; }
+svg.chart text.lab-strong { fill: var(--ink); font-size: 11.5px; font-weight: 600; }
+details.data { font-size: 13px; color: var(--ink-2); }
+details.data summary { cursor: pointer; }
+details.data table { margin-top: 6px; font-size: 12.5px; }
+.memo { max-width: 780px; display: grid; gap: 16px; }
+.memo > * { min-width: 0; }
+.memo dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 14px; margin: 0; font-size: 14px; border-block: 1px solid var(--grid); padding-block: 10px; }
+.memo dt { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); padding-top: 2px; }
+.memo dd { margin: 0; }
+.memo ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.log { display: grid; gap: 12px; }
+.log article { border-left: 3px solid var(--grid); padding-left: 12px; display: grid; gap: 4px; }
+.log h3 { font-size: 14.5px; }
+.log p { font-size: 14px; color: var(--ink-2); }
+footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--grid); padding-top: 12px; }
+#tip { position: fixed; pointer-events: none; z-index: 10; background: var(--surface); color: var(--ink); border: 1px solid var(--ring);
+  border-radius: 8px; padding: 7px 10px; font-size: 12.5px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); max-width: 260px; display: none; line-height: 1.4; }
+#tip b { font-weight: 650; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">PAWLY · fictional pet-food D2C brand · 40 Korean regions · 104 weeks of synthetic data</div>
+    <h1>PAWLY Incrementality Lab</h1>
+    <p class="lede">Five questions a small advertiser asks about its ads, each answered with the study that fits it:
+      a geo experiment designed for power, a causal-impact readout of a pause, a check of what AI auto-bidding really added,
+      and a media mix model calibrated with the experiments. Every number is graded against the hidden truth of the simulated world.</p>
+    <p style="margin-top:8px"><span class="badge">All data synthetic · no real brand, platform or customer</span></p>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Chapters">
+    <button role="tab" data-tab="start" aria-selected="true">Start here</button>
+    <button role="tab" data-tab="geo" aria-selected="false">1 · Geo test</button>
+    <button role="tab" data-tab="pause" aria-selected="false">2 · Pause</button>
+    <button role="tab" data-tab="auto" aria-selected="false">3 · Auto-bidding</button>
+    <button role="tab" data-tab="budget" aria-selected="false">4 · Budget</button>
+    <button role="tab" data-tab="readout" aria-selected="false">5 · Advertiser readout</button>
+    <button role="tab" data-tab="checks" aria-selected="false">How it was checked</button>
+  </nav>
+
+  <!-- ================= Start ================= -->
+  <section class="view" id="view-start" role="tabpanel">
+    <div class="panel">
+      <h2>Three things PAWLY's own reports got wrong</h2>
+      <div class="tiles" id="findings"></div>
+    </div>
+    <div class="panel">
+      <h2>Scorecard: the study's answer, the naive answer, and the truth</h2>
+      <p class="note">"Naive" is what the advertiser would conclude without the study: the platform's reported ROAS, a before/after
+        comparison, or reported revenue. Intervals are 95% (chapters 1-3) and 90% (chapter 4).</p>
+      <div class="tbl"><table id="scorecard"></table></div>
+    </div>
+    <div class="panel">
+      <h2>One channel, six reads: what to tell the advertiser about short video</h2>
+      <p class="note" id="tri-note"></p>
+      <div class="tbl"><table id="tri"></table></div>
+    </div>
+    <div class="panel">
+      <h2>Chapter 0 · Pick the study from the question</h2>
+      <p class="note">A decision table an account team can use before promising a study. Eligibility numbers come from PAWLY's own history.</p>
+      <div class="tbl"><table id="playbook"></table></div>
+    </div>
+  </section>
+
+  <!-- ================= Geo test ================= -->
+  <section class="view" id="view-geo" role="tabpanel" hidden>
+    <details class="guide"><summary>How to read this tab</summary><ul>
+      <li><b>Design (left):</b> before launching, past weeks are replayed as fake tests. Each line shows how often a test of that length catches a true revenue drop of the size on the x-axis. Where a line crosses 80% is its minimum detectable effect.</li>
+      <li><b>Eligibility table:</b> turns that effect into money. "Min. detectable iROAS" is the smallest return per won the test can tell apart from zero at the planned budget.</li>
+      <li><b>Readout (below):</b> each dot is a region pair; the shaded band is normal pair-to-pair noise. A dot outside it is checked with the advertiser before anything is dropped.</li>
+    </ul></details>
+    <div class="panel">
+      <p class="q" id="geo-q"></p>
+      <p class="answer" id="geo-answer"></p>
+    </div>
+    <div class="two">
+      <div class="panel">
+        <div class="head"><div><h3>Power by test length</h3><p class="small">Share of replayed past windows where the 95% interval sits below zero</p></div>
+          <div class="legend"><span><span class="sw" style="background:var(--est)"></span>6 weeks (chosen)</span>
+            <span><span class="sw" style="background:var(--other)"></span>2, 4, 8 weeks</span></div></div>
+        <svg class="chart" id="power" viewBox="0 0 560 300" role="img" aria-label="Power curves by test length"></svg>
+        <details class="data"><summary>Data table</summary><div class="tbl" id="power-table"></div></details>
+      </div>
+      <div class="panel">
+        <h3>Eligibility: what each length can detect</h3>
+        <div class="tbl"><table id="elig"></table></div>
+        <p class="note" id="aa-note"></p>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Design options the advertiser may ask for</h3>
+      <p class="small">Same history, same A/A calibration. "Min. detectable return" = the smallest return per won each design can tell apart from zero with 80% power.</p>
+      <div class="tbl"><table id="options"></table></div>
+      <p class="note" id="options-note"></p>
+    </div>
+    <div class="two">
+      <div class="panel">
+        <div class="head"><div><h3>Pair diagnostic</h3><p class="small">Change in go-dark / control revenue ratio, test vs pre-period, in robust z-units</p></div></div>
+        <svg class="chart" id="pairs" viewBox="0 0 560 280" role="img" aria-label="Pair diagnostic"></svg>
+        <details class="data"><summary>Data table</summary><div class="tbl" id="pairs-table"></div></details>
+      </div>
+      <div class="panel">
+        <h3>Readout</h3>
+        <div class="tiles" id="geo-tiles"></div>
+        <p class="note" id="geo-flag"></p>
+        <h3 style="margin-top:6px">Is dropping the pair the right call? 60 luck draws</h3>
+        <div class="tbl"><table id="mc"></table></div>
+        <p class="note" id="mc-note"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Pause ================= -->
+  <section class="view" id="view-pause" role="tabpanel" hidden>
+    <details class="guide"><summary>How to read this tab</summary><ul>
+      <li>Black line: actual daily revenue, all regions. Blue line and band: what revenue would have been without the pause (median and 95% range), learned from the weeks before.</li>
+      <li>The model leans on pet-food category searches, which follow the season but not PAWLY's ads. That is how it tells the summer dip apart from the pause.</li>
+      <li>Grey weeks are masked: during the geo test half the regions had no video, so the model must not learn from them.</li>
+    </ul></details>
+    <div class="panel"><p class="q" id="pause-q"></p><p class="answer" id="pause-answer"></p></div>
+    <div class="panel">
+      <div class="head">
+        <div><h3>Daily revenue vs counterfactual</h3><p class="small">KRW million per day, all regions</p></div>
+        <div class="legend"><span><span class="sw" style="background:var(--ink)"></span>Actual</span>
+          <span><span class="sw" style="background:var(--est)"></span>Counterfactual (median)</span>
+          <span><span class="sw box" style="background:var(--est-band)"></span>95% range</span></div>
+      </div>
+      <svg class="chart" id="ci-chart" viewBox="0 0 760 300" role="img" aria-label="Actual revenue against the counterfactual"></svg>
+      <details class="data"><summary>Data table (pause weeks)</summary><div class="tbl" id="ci-table"></div></details>
+    </div>
+    <div class="two">
+      <div class="panel"><h3>Three answers to the same question</h3><div class="tiles" id="pause-tiles"></div></div>
+      <div class="panel"><h3>Placebo checks: quiet past windows</h3><div class="tbl"><table id="placebo"></table></div>
+        <p class="note">A model that finds effects where nothing happened cannot be trusted where something did. Both ranges contain zero.</p></div>
+    </div>
+  </section>
+
+  <!-- ================= Auto-bidding ================= -->
+  <section class="view" id="view-auto" role="tabpanel" hidden>
+    <details class="guide"><summary>How to read this tab</summary><ul>
+      <li>Both lines are indexed to 100 over the four weeks before the switch, so they share one axis.</li>
+      <li>Orange: search revenue as the ad platform reports it. Black: total revenue from PAWLY's own order system.</li>
+      <li>Histogram: the same jump measurement at 456 past dates when nothing changed. If the measured jump sits in the middle, it is ordinary noise.</li>
+    </ul></details>
+    <div class="panel"><p class="q" id="auto-q"></p><p class="answer" id="auto-answer"></p></div>
+    <div class="two">
+      <div class="panel">
+        <div class="head"><div><h3>Reported search revenue vs total revenue</h3><p class="small">Index, 4 weeks before the switch = 100 (7-day average)</p></div>
+          <div class="legend"><span><span class="sw" style="background:var(--naive)"></span>Reported search revenue</span>
+            <span><span class="sw" style="background:var(--ink)"></span>Total revenue</span></div></div>
+        <svg class="chart" id="auto-chart" viewBox="0 0 560 300" role="img" aria-label="Indexed reported search revenue and total revenue"></svg>
+      </div>
+      <div class="panel">
+        <div class="head"><div><h3>Is the jump unusual?</h3><p class="small">Jumps in total revenue at 456 quiet past dates, %</p></div></div>
+        <svg class="chart" id="placebo-hist" viewBox="0 0 560 300" role="img" aria-label="Distribution of placebo jumps"></svg>
+      </div>
+    </div>
+    <div class="two">
+      <div class="panel"><h3>Where the reported increase came from (4 weeks)</h3><div class="tiles" id="auto-tiles"></div></div>
+      <div class="panel"><h3>The budget increase that followed</h3><div class="tiles" id="up-tiles"></div><p class="note" id="up-note"></p></div>
+    </div>
+  </section>
+
+  <!-- ================= Budget ================= -->
+  <section class="view" id="view-budget" role="tabpanel" hidden>
+    <details class="guide"><summary>How to read this tab</summary><ul>
+      <li><b>ROI chart:</b> each channel's average return per won. Grey: the model built before any experiment. Blue: the same model calibrated with the two experiments. Black tick: the truth. Orange ring: what the ad platforms report.</li>
+      <li><b>Response curve:</b> extra revenue next year if one channel's budget is scaled (x = 1 is today's budget), others unchanged. Blue band: calibrated model, 90%. Black: the truth.</li>
+      <li><b>Plans:</b> each model proposes a reallocation (same total). Every plan is then run through the true world.</li>
+    </ul></details>
+    <div class="panel"><p class="q" id="budget-q"></p><p class="answer" id="budget-answer"></p></div>
+    <div class="panel">
+      <div class="head"><div><h3>Cross-platform view: what each platform claims vs what it adds</h3>
+        <p class="small">Weeks 1-78. Claimed = the platform's own reported revenue. Added = incremental revenue from the calibrated model (90%).</p></div></div>
+      <div class="tiles" id="xp-tiles"></div>
+      <div class="tbl"><table id="xp-table"></table></div>
+      <p class="note" id="xp-note"></p>
+    </div>
+    <div class="two">
+      <div class="panel">
+        <div class="head"><div><h3>Channel ROI against the truth</h3><p class="small">Weeks 1-78, 90% intervals</p></div></div>
+        <div class="legend"><span><span class="sw" style="background:var(--other)"></span>Before tests</span>
+          <span><span class="sw" style="background:var(--est)"></span>After tests (calibrated)</span>
+          <span><span class="sw" style="background:var(--ink);width:3px;height:12px"></span>Truth</span>
+          <span><span class="sw dot" style="border:2px solid var(--naive);background:transparent"></span>Platform-reported</span></div>
+        <svg class="chart" id="roi" viewBox="0 0 560 300" role="img" aria-label="Channel ROI"></svg>
+        <details class="data"><summary>Data table</summary><div class="tbl" id="roi-table"></div></details>
+      </div>
+      <div class="panel">
+        <div class="head"><div><h3>Response curve</h3><p class="small">Extra revenue next year, KRW million</p></div><div class="seg" id="curve-seg"></div></div>
+        <div class="legend"><span><span class="sw" style="background:var(--est)"></span>Calibrated model (median)</span>
+          <span><span class="sw box" style="background:var(--est-band)"></span>90% range</span>
+          <span><span class="sw" style="background:var(--ink)"></span>Truth</span></div>
+        <svg class="chart" id="curve" viewBox="0 0 560 300" role="img" aria-label="Response curve"></svg>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Marginal ROI at today's budget: where the next won earns most</h3>
+      <p class="small">Extra revenue per extra won if one channel's budget moves ±10% next year. Above 1 = room to grow; below 1 = trim first.</p>
+      <div class="tbl"><table id="mroi"></table></div>
+      <p class="note" id="mroi-note"></p>
+    </div>
+    <div class="panel">
+      <h3>Budget plans, run through the true world</h3>
+      <div class="tbl"><table id="plans"></table></div>
+      <p class="note" id="plans-note"></p>
+    </div>
+  </section>
+
+  <!-- ================= Readout ================= -->
+  <section class="view" id="view-readout" role="tabpanel" hidden>
+    <article class="panel memo" id="memo"></article>
+    <aside class="panel memo" id="ae-notes" aria-label="Internal notes for the account team"></aside>
+  </section>
+
+  <!-- ================= Checks ================= -->
+  <section class="view" id="view-checks" role="tabpanel" hidden>
+    <div class="panel"><h2>Checks that every number passed</h2><div class="tiles" id="check-tiles"></div></div>
+    <div class="panel"><h2>Known limits</h2>
+      <ul class="note" style="margin:0;padding-left:20px;display:grid;gap:6px">
+        <li><b>One simulated world.</b> The geo test was re-run on 60 noise draws; the other chapters were checked with placebo windows, not repeated worlds.</li>
+        <li><b>The control series is cleaner than real ones.</b> The category-search index that drives the causal-impact model follows true demand with 5% noise. Real covariates (search trends, competitor sales) are noisier and can be touched by the campaign, which widens intervals and can bias them.</li>
+        <li><b>TBR with A/A calibration instead of Trimmed Match.</b> TBR reads the go-dark test from group totals, as in GeoX; its interval was fixed with historical A/A tests. Trimmed Match, the pair-level estimator that trims outlier pairs automatically, would be the more robust choice when pairs differ a lot; here the pair diagnostic and an advertiser check do that trimming by hand.</li>
+        <li><b>No user-level paths.</b> The cross-platform view uses each platform's self-reported revenue; GA4-style data-driven attribution paths are not simulated.</li>
+        <li><b>The world is mine.</b> The methods were tested against problems I chose; the log below records where they failed a check, including results that came out differently from the plan.</li>
+      </ul></div>
+    <div class="panel"><h2>Problems the checks caught, and the fixes</h2>
+      <p class="note">Built with Claude Code. Each entry is a check that failed, why, and what changed. Full log: docs/ai_workflow_log.md.</p>
+      <div class="log" id="log"></div></div>
+  </section>
+
+  <footer>PAWLY is fictional; all data is simulated from a known process so every method can be graded. Methods: time-based regression with A/A calibration, Bayesian structural time series (PyMC), regression discontinuity in time with placebo dates, Bayesian media mix model with experiment calibration.</footer>
+</div>
+<div id="tip" role="status"></div>
+<script id="data" type="application/json">{"playbook":{"title":"Measurement playbook: pick the study from the question","rows":[{"question":"Is this channel adding sales at all?","method":"Geo experiment (go-dark or heavy-up in matched regions)","chapter":1,"use_when":"The channel can be switched off or raised by region; user-level holdouts are not possible or not trusted","eligibility":"PAWLY: 20 matched region pairs, 6 weeks, national budget of at least KRW 1.75M/day so that an iROAS of 1.0 is detectable (MDE 2.6% of revenue). A 30% go-dark share detects 0.75 at 59% of the revenue at risk","output":"Incremental revenue and iROAS with a 95% interval; brand-search lift as a second KPI","watch_out":"Spillover between regions, local promotions in control regions, budget changes during the test"},{"question":"Our budget is below the geo-test threshold. What can we still learn?","method":"Platform conversion lift (user-level holdout), or a planned on/off period read with causal impact","chapter":0,"use_when":"National budget for the channel under about KRW 1.75M/day, or fewer than ~20 comparable regions","eligibility":"Conversion lift: enough conversions per arm to meet the platform's minimum. On/off read: a stable pre-period and one clean change date","output":"A lift estimate with a wide interval; results pool into a calibrated MMM as the business grows","watch_out":"An underpowered test that reads 'no effect' when the honest answer is 'can't tell yet'"},{"question":"We already paused or changed something. What did it do?","method":"Causal impact (Bayesian structural time series)","chapter":2,"use_when":"A single, dated change happened and no holdout was planned","eligibility":"A stable pre-period several times longer than the post-period; control series that the change did not touch","output":"Day-by-day counterfactual and cumulative effect with a credible interval","watch_out":"Seasonality or promotions that coincide with the change; a simple before/after comparison absorbs them"},{"question":"Reported conversions jumped after switching to AI auto-bidding. Is it real?","method":"Total-sales check around the switch (regression discontinuity in time + placebo dates)","chapter":3,"use_when":"Platform-reported results rose but total sales did not obviously move","eligibility":"A clear switch date, daily total sales from the advertiser's own system, no other big change within about four weeks","output":"Split of the reported increase into true incremental sales and sales re-credited from brand search and organic","watch_out":"Attribution window changes; budget increases that follow the high reported ROAS"},{"question":"Every platform says it drove the sale. Whose numbers do we believe?","method":"Cross-platform comparison: each platform's reported revenue vs incremental revenue","chapter":4,"use_when":"Several platforms each report a strong ROAS and their claims add up to more than ads could have driven","eligibility":"Per-channel platform reports plus one incrementality source: an experiment or a calibrated MMM","output":"Credit ratio per channel (reported / incremental); headroom where platforms under-credit","watch_out":"Ranking channels by their own reported ROAS; attribution windows that differ by platform"},{"question":"How should next year's budget be split?","method":"Bayesian media mix model calibrated with experiment results; response curves","chapter":4,"use_when":"Several channels compete for one budget and spend varies over time","eligibility":"About two years of weekly data, real spend variation per channel, at least one experiment to calibrate against","output":"Channel response curves, marginal ROI and a reallocation with expected gain ranges","watch_out":"Channels whose spend moves together; without calibration the model can hand one channel's effect to another"},{"question":"Did the campaign raise interest in the brand?","method":"Search lift (brand search volume as a KPI in the geo test) or a brand lift survey","chapter":1,"use_when":"Upper-funnel goals; purchase effects may take longer than the test","eligibility":"PAWLY: the same 6-week geo design detects a 2.1% change in brand searches","output":"Lift in brand searches (or ad recall) with an interval","watch_out":"Brand search ads can steal clicks from organic results; measure searches, not ad clicks"}]},"ch1_design":{"question":"Does short-form video drive incremental revenue for PAWLY?","design":"Go-dark geo test: short video switched off in one region of each matched pair","test_weeks":[79,84],"pre_fit_days":84,"kpis":["revenue (primary)","brand search volume (secondary, search lift)"],"planned_video_budget_m_per_day":2.5,"prior_iroas_range":[0.5,2.0],"pairs":[["G01","G39"],["G32","G18"],["G08","G11"],["G35","G31"],["G04","G13"],["G26","G28"],["G30","G37"],["G23","G21"],["G33","G29"],["G06","G19"],["G40","G20"],["G38","G07"],["G15","G03"],["G34","G36"],["G10","G25"],["G05","G24"],["G27","G14"],["G09","G16"],["G12","G02"],["G17","G22"]],"go_dark":["G01","G18","G11","G35","G13","G28","G30","G23","G29","G06","G20","G38","G15","G34","G25","G05","G14","G09","G02","G22"],"control":["G39","G32","G08","G31","G04","G26","G37","G21","G33","G19","G40","G07","G03","G36","G10","G24","G27","G16","G12","G17"],"balance":{"go_dark_revenue_share":0.5,"go_dark_video_spend_share":0.514},"prefit_last_12_weeks":{"ratio":1.0,"mape":0.0221,"corr":0.859},"eligibility":[{"weeks":2,"aa_false_positive_uncalibrated":0.149,"se_scale":1.35,"aa_false_positive_holdout":0.025,"mde_revenue_pct":3.6,"mde_revenue_krw_m":17.3,"mde_brand_search_pct":3.0,"video_spend_withheld_krw_m":18.0,"min_detectable_iroas":0.96,"min_national_video_budget_for_iroas1_m_per_day":2.41,"revenue_at_risk_krw_m":[9.0,36.0]},{"weeks":4,"aa_false_positive_uncalibrated":0.159,"se_scale":1.43,"aa_false_positive_holdout":0.014,"mde_revenue_pct":2.9,"mde_revenue_krw_m":28.0,"mde_brand_search_pct":2.4,"video_spend_withheld_krw_m":36.0,"min_detectable_iroas":0.78,"min_national_video_budget_for_iroas1_m_per_day":1.95,"revenue_at_risk_krw_m":[18.0,71.9]},{"weeks":6,"aa_false_positive_uncalibrated":0.176,"se_scale":1.49,"aa_false_positive_holdout":0.015,"mde_revenue_pct":2.6,"mde_revenue_krw_m":37.8,"mde_brand_search_pct":2.1,"video_spend_withheld_krw_m":53.9,"min_detectable_iroas":0.7,"min_national_video_budget_for_iroas1_m_per_day":1.75,"revenue_at_risk_krw_m":[27.0,107.9]},{"weeks":8,"aa_false_positive_uncalibrated":0.21,"se_scale":1.51,"aa_false_positive_holdout":0.004,"mde_revenue_pct":2.5,"mde_revenue_krw_m":48.5,"mde_brand_search_pct":2.0,"video_spend_withheld_krw_m":71.9,"min_detectable_iroas":0.67,"min_national_video_budget_for_iroas1_m_per_day":1.69,"revenue_at_risk_krw_m":[36.0,143.8]}],"design_options":[{"design":"Go-dark, half the regions (chosen)","measures":"average return","weeks":6,"treated_share_of_video_pct":51,"mde_revenue_pct":2.6,"mde_revenue_krw_m":37.8,"spend_moved_krw_m":53.9,"min_detectable_return":0.7,"revenue_at_risk_krw_m":[27.0,107.9]},{"design":"Go-dark, 30% of regions","measures":"average return","weeks":6,"treated_share_of_video_pct":30,"mde_revenue_pct":2.7,"mde_revenue_krw_m":23.6,"spend_moved_krw_m":31.6,"min_detectable_return":0.75,"revenue_at_risk_krw_m":[15.8,63.2]},{"design":"Go-dark, 30% of regions","measures":"average return","weeks":8,"treated_share_of_video_pct":30,"mde_revenue_pct":2.5,"mde_revenue_krw_m":29.1,"spend_moved_krw_m":42.1,"min_detectable_return":0.69,"revenue_at_risk_krw_m":[21.1,84.3]},{"design":"Heavy-up +50%, half the regions","measures":"marginal return","weeks":6,"treated_share_of_video_pct":51,"mde_revenue_pct":2.6,"mde_revenue_krw_m":37.8,"spend_moved_krw_m":27.0,"min_detectable_return":1.4,"revenue_at_risk_krw_m":null}],"power_curves":{"deltas_pct":[0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2.0,2.1,2.2,2.3,2.4,2.5,2.6,2.7,2.8,2.9,3.0,3.1,3.2,3.3,3.4,3.5,3.6,3.7,3.8,3.9,4.0,4.1,4.2,4.3,4.4,4.5,4.6,4.7,4.8,4.9,5.0,5.1,5.2,5.3,5.4,5.5,5.6,5.7,5.8,5.9,6.0,6.1,6.2,6.3,6.4,6.5,6.6,6.7,6.8,6.9,7.0,7.1,7.2,7.3,7.4,7.5,7.6,7.7,7.8,7.9,8.0],"revenue":{"2":[0.022,0.033,0.038,0.045,0.055,0.069,0.08,0.092,0.104,0.122,0.142,0.158,0.179,0.201,0.217,0.24,0.266,0.288,0.308,0.333,0.356,0.388,0.412,0.434,0.471,0.501,0.524,0.562,0.587,0.615,0.646,0.675,0.707,0.739,0.76,0.792,0.813,0.837,0.853,0.875,0.882,0.892,0.91,0.921,0.929,0.937,0.943,0.948,0.957,0.963,0.967,0.976,0.981,0.985,0.986,0.987,0.989,0.99,0.992,0.993,0.993,0.994,0.996,0.996,0.996,0.997,0.997,0.997,0.998,0.998,0.999,0.999,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0],"4":[0.024,0.03,0.042,0.051,0.056,0.064,0.078,0.095,0.119,0.141,0.164,0.195,0.231,0.265,0.296,0.327,0.363,0.406,0.436,0.474,0.509,0.547,0.584,0.622,0.657,0.695,0.73,0.762,0.794,0.818,0.835,0.854,0.876,0.898,0.914,0.929,0.939,0.948,0.96,0.97,0.977,0.983,0.986,0.99,0.993,0.995,0.996,0.997,0.999,0.999,0.999,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0],"6":[0.024,0.034,0.047,0.061,0.078,0.087,0.105,0.13,0.161,0.192,0.224,0.251,0.285,0.324,0.361,0.394,0.434,0.471,0.519,0.564,0.609,0.652,0.699,0.732,0.769,0.794,0.831,0.868,0.888,0.914,0.939,0.952,0.96,0.969,0.978,0.985,0.991,0.994,0.996,0.997,0.999,0.999,0.999,0.999,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0],"8":[0.021,0.027,0.037,0.053,0.067,0.089,0.12,0.145,0.167,0.196,0.23,0.267,0.308,0.349,0.399,0.437,0.484,0.534,0.579,0.623,0.661,0.695,0.733,0.765,0.799,0.834,0.858,0.878,0.902,0.929,0.947,0.964,0.974,0.982,0.987,0.989,0.993,0.995,0.998,0.999,0.999,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0]},"brand_search":{"2":[0.021,0.024,0.028,0.035,0.047,0.057,0.073,0.085,0.103,0.124,0.142,0.173,0.2,0.229,0.262,0.296,0.325,0.355,0.39,0.429,0.478,0.524,0.56,0.598,0.631,0.676,0.709,0.735,0.769,0.799,0.826,0.855,0.871,0.888,0.913,0.927,0.944,0.951,0.961,0.967,0.974,0.979,0.983,0.984,0.988,0.991,0.993,0.996,0.996,0.996,0.997,0.999,0.999,0.999,0.999,0.999,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0],"4":[0.021,0.03,0.034,0.049,0.062,0.073,0.094,0.115,0.139,0.177,0.21,0.249,0.287,0.333,0.383,0.422,0.472,0.52,0.566,0.618,0.666,0.701,0.738,0.782,0.822,0.85,0.879,0.903,0.919,0.936,0.952,0.96,0.971,0.979,0.989,0.991,0.993,0.995,0.997,0.998,0.999,0.999,0.999,0.999,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0],"6":[0.018,0.028,0.039,0.056,0.08,0.1,0.118,0.159,0.197,0.235,0.27,0.314,0.376,0.421,0.465,0.514,0.582,0.643,0.691,0.729,0.77,0.813,0.846,0.879,0.904,0.925,0.941,0.954,0.969,0.979,0.986,0.991,0.992,0.995,0.997,0.999,0.999,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0],"8":[0.023,0.036,0.053,0.07,0.095,0.127,0.163,0.186,0.223,0.261,0.309,0.351,0.404,0.459,0.524,0.575,0.633,0.685,0.736,0.778,0.805,0.833,0.871,0.901,0.922,0.943,0.967,0.977,0.986,0.989,0.994,0.995,0.998,0.999,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0]},"n_sims":{"2":1560,"4":1480,"6":1400,"8":1320}},"recommendation":{"weeks":6,"why":"6 weeks detects a 2.6% revenue drop in the go-dark regions, i.e. any iROAS of 0.7 or more, with 80% power. That covers most of the plausible range 0.5-2.0; 8 weeks adds little. A/A false positives 1.5% on held-out past windows."},"estimator":"Proportional time-based regression (TBR) on daily group totals; 95% interval = AR(1)-adjusted SE x A/A calibration factor","se_scale":{"2":1.35,"4":1.43,"6":1.49,"8":1.51},"se_scale_brand_search":{"2":1.0,"4":1.03,"6":1.05,"8":1.08},"aa_mean_z":{"2":-0.03,"4":-0.01,"6":-0.09,"8":0.04}},"ch1_readout":{"question":"Does short-form video drive incremental revenue for PAWLY?","test_weeks":[79,84],"all_pairs":{"revenue":{"effect_krw_m":-80.4,"ci_krw_m":[-113.3,-47.5],"effect_pct":-5.48,"iroas":1.49,"iroas_ci":[0.88,2.1],"significant":true,"video_withheld_krw_m":53.9},"brand_search":{"effect":-36895,"effect_pct":-6.41,"significant":true}},"pair_diagnostics":{"log_ratio_change":[-0.0226,-0.0273,-0.0598,-0.0495,-0.0663,-0.1961,-0.098,-0.0275,0.0113,-0.0633,-0.0111,-0.0907,-0.066,-0.0948,-0.0602,-0.0112,-0.0361,-0.033,-0.0621,-0.0154],"robust_z":[0.79,0.68,-0.13,0.13,-0.29,-3.5,-1.07,0.67,1.63,-0.21,1.08,-0.89,-0.28,-1.0,-0.14,1.08,0.46,0.54,-0.19,0.97],"pairs":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20],"flagged":[{"pair":6,"go_dark":"G28","control":"G26","robust_z":-3.5,"suspect_side":"control","control_vs_other_controls_pct":18.0}]},"after_check":{"note":"Advertiser confirmed a retail partner promotion in the flagged control region during weeks 80-83; pair excluded.","revenue":{"effect_krw_m":-60.8,"ci_krw_m":[-92.1,-29.6],"effect_pct":-4.47,"iroas":1.2,"iroas_ci":[0.58,1.81],"significant":true,"video_withheld_krw_m":50.8},"brand_search":{"effect":-28193,"effect_pct":-5.28,"ci_pct":[-6.69,-3.87],"significant":true},"leave_one_pair_out_iroas":[1.2,1.63]},"with_cooldown":{"weeks":[79,86],"revenue":{"effect_krw_m":-77.5,"ci_krw_m":[-115.8,-39.1],"effect_pct":-4.27,"iroas":1.52,"iroas_ci":[0.77,2.28],"significant":true,"video_withheld_krw_m":50.8},"truth_iroas":1.693,"share_of_loss_after_test_pct":12.5},"validation_against_truth":{"note":"Each estimate is graded against the true iROAS of the regions it covers.","true_effect_pct_all":-5.46,"true_brand_search_effect_all":-22402,"all_pairs":{"estimate":1.49,"truth":1.483,"ci":[0.88,2.1]},"after_check":{"estimate":1.2,"truth":1.482,"ci":[0.58,1.81]},"flagged_pair_go_dark_true_iroas":{"G28":1.495},"brand_search_after_check":{"estimate_pct":-5.28,"ci_pct":[-6.69,-3.87],"truth_pct":-3.99}}},"ch1_montecarlo":{"draws":60,"all_pairs":{"mean_bias_iroas":0.341,"rmse_iroas":0.4,"ci_coverage":0.867},"without_contaminated_pair":{"mean_bias_iroas":0.059,"rmse_iroas":0.23,"ci_coverage":0.983},"with_cooldown":{"mean_bias_iroas":0.126,"rmse_iroas":0.299,"ci_coverage":0.983,"test_only_bias_vs_full_effect":-0.151},"diagnostic_flags_promo_pair":0.817,"draws_with_any_false_flag":0.217,"mean_true_iroas":1.483},"ch2":{"question":"Short video was paused nationwide for 4 weeks. What did it cost?","pause_weeks":[89,92],"model":"Bayesian structural time series in PyMC: local level + log category searches + day of week, on log revenue","pre_period_weeks":[63,88],"masked_weeks":[79,86],"video_spend_in_pause_krw_m":0.0,"cancelled_video_budget_krw_m":85.8,"naive_before_after":{"effect_krw_m":-244.7,"iroas":2.85},"causal_impact":{"effect_krw_m":-93.0,"ci_krw_m":[-163.9,-31.5],"effect_pct":-5.37,"iroas":1.08,"iroas_ci":[0.37,1.91],"max_rhat":1.005,"divergences":0,"category_elasticity":0.784},"placebo_checks":[{"post_weeks":[70,73],"effect_krw_m":-14.6,"ci_krw_m":[-95.3,61.0],"contains_zero":true},{"post_weeks":[76,78],"effect_krw_m":-18.9,"ci_krw_m":[-65.6,27.3],"contains_zero":true}],"series":{"date":["2026-01-12","2026-01-13","2026-01-14","2026-01-15","2026-01-16","2026-01-17","2026-01-18","2026-01-19","2026-01-20","2026-01-21","2026-01-22","2026-01-23","2026-01-24","2026-01-25","2026-01-26","2026-01-27","2026-01-28","2026-01-29","2026-01-30","2026-01-31","2026-02-01","2026-02-02","2026-02-03","2026-02-04","2026-02-05","2026-02-06","2026-02-07","2026-02-08","2026-02-09","2026-02-10","2026-02-11","2026-02-12","2026-02-13","2026-02-14","2026-02-15","2026-02-16","2026-02-17","2026-02-18","2026-02-19","2026-02-20","2026-02-21","2026-02-22","2026-02-23","2026-02-24","2026-02-25","2026-02-26","2026-02-27","2026-02-28","2026-03-01","2026-03-02","2026-03-03","2026-03-04","2026-03-05","2026-03-06","2026-03-07","2026-03-08","2026-03-09","2026-03-10","2026-03-11","2026-03-12","2026-03-13","2026-03-14","2026-03-15","2026-03-16","2026-03-17","2026-03-18","2026-03-19","2026-03-20","2026-03-21","2026-03-22","2026-03-23","2026-03-24","2026-03-25","2026-03-26","2026-03-27","2026-03-28","2026-03-29","2026-03-30","2026-03-31","2026-04-01","2026-04-02","2026-04-03","2026-04-04","2026-04-05","2026-04-06","2026-04-07","2026-04-08","2026-04-09","2026-04-10","2026-04-11","2026-04-12","2026-04-13","2026-04-14","2026-04-15","2026-04-16","2026-04-17","2026-04-18","2026-04-19","2026-04-20","2026-04-21","2026-04-22","2026-04-23","2026-04-24","2026-04-25","2026-04-26","2026-04-27","2026-04-28","2026-04-29","2026-04-30","2026-05-01","2026-05-02","2026-05-03","2026-05-04","2026-05-05","2026-05-06","2026-05-07","2026-05-08","2026-05-09","2026-05-10","2026-05-11","2026-05-12","2026-05-13","2026-05-14","2026-05-15","2026-05-16","2026-05-17","2026-05-18","2026-05-19","2026-05-20","2026-05-21","2026-05-22","2026-05-23","2026-05-24","2026-05-25","2026-05-26","2026-05-27","2026-05-28","2026-05-29","2026-05-30","2026-05-31","2026-06-01","2026-06-02","2026-06-03","2026-06-04","2026-06-05","2026-06-06","2026-06-07","2026-06-08","2026-06-09","2026-06-10","2026-06-11","2026-06-12","2026-06-13","2026-06-14","2026-06-15","2026-06-16","2026-06-17","2026-06-18","2026-06-19","2026-06-20","2026-06-21","2026-06-22","2026-06-23","2026-06-24","2026-06-25","2026-06-26","2026-06-27","2026-06-28","2026-06-29","2026-06-30","2026-07-01","2026-07-02","2026-07-03","2026-07-04","2026-07-05","2026-07-06","2026-07-07","2026-07-08","2026-07-09","2026-07-10","2026-07-11","2026-07-12","2026-07-13","2026-07-14","2026-07-15","2026-07-16","2026-07-17","2026-07-18","2026-07-19","2026-07-20","2026-07-21","2026-07-22","2026-07-23","2026-07-24","2026-07-25","2026-07-26","2026-07-27","2026-07-28","2026-07-29","2026-07-30","2026-07-31","2026-08-01","2026-08-02","2026-08-03","2026-08-04","2026-08-05","2026-08-06","2026-08-07","2026-08-08","2026-08-09"],"actual":[73305605.0,71953544.0,67868768.0,68070645.0,69705942.0,67650922.0,74015676.0,71842028.0,71213643.0,71453461.0,70191631.0,72571867.0,70577645.0,74922770.0,75356753.0,72066661.0,69016110.0,68276140.0,70463069.0,67444178.0,73781160.0,75516502.0,72867708.0,72183733.0,71643274.0,74802618.0,68875067.0,74671738.0,76116452.0,72360297.0,69951938.0,71017240.0,73669872.0,68398584.0,75314046.0,76445104.0,74293913.0,71979366.0,71298921.0,73835507.0,71654399.0,76024781.0,76253612.0,73942482.0,72246759.0,71087993.0,73617110.0,70237429.0,76838220.0,74355084.0,98394205.0,71854280.0,69515402.0,70427376.0,70512262.0,76551120.0,73100789.0,71186249.0,71220101.0,69664857.0,73350636.0,70080803.0,76139053.0,75603066.0,73361918.0,71588884.0,69425941.0,72568688.0,71399846.0,76617869.0,76185957.0,73170002.0,70507042.0,71612004.0,73827589.0,71146946.0,76198263.0,75005674.0,71359909.0,72350347.0,69189137.0,71195668.0,70714430.0,75140693.0,76105282.0,73694913.0,71914782.0,72003861.0,73639459.0,70887520.0,75141356.0,72850597.0,72550716.0,68309988.0,69866467.0,70478088.0,69705258.0,75356675.0,74890826.0,72144375.0,70593718.0,70028368.0,73547674.0,68988781.0,74475874.0,73804937.0,71218238.0,71057679.0,69837748.0,71312272.0,68964105.0,75748354.0,74882886.0,71626167.0,69989740.0,68809186.0,70540396.0,67010895.0,72655058.0,72281924.0,68046183.0,67381209.0,68043760.0,67052993.0,64943879.0,70183674.0,69468493.0,68198342.0,65330796.0,65050376.0,66741001.0,65186193.0,69550119.0,70555365.0,68081596.0,66824908.0,65233034.0,67446932.0,64970524.0,70095373.0,70024730.0,67822120.0,66071075.0,66208982.0,67157477.0,65046773.0,70164077.0,68736669.0,66054334.0,65804015.0,63433095.0,66713749.0,64560124.0,68186173.0,68441713.0,66678760.0,66294958.0,66136708.0,69017409.0,67043502.0,70966070.0,71017829.0,67541040.0,66343629.0,65534337.0,67496741.0,65266409.0,69075478.0,69956683.0,67476599.0,64990732.0,66108361.0,66452305.0,65279704.0,70628427.0,69282966.0,66325482.0,63860073.0,65182830.0,67388083.0,62978904.0,69923683.0,67517299.0,63691377.0,62896622.0,60279493.0,62234002.0,59349013.0,63446888.0,62185222.0,58061900.0,58061736.0,56179441.0,56717163.0,55357706.0,59433490.0,57886496.0,55666444.0,54661583.0,52824353.0,54522965.0,54107780.0,59346558.0,59312324.0,56561755.0,56445775.0,55439436.0,57533455.0,56125021.0,62159317.0],"cf_median":[73211929.0,70798077.0,69535810.0,68332432.0,71193004.0,67392016.0,73556187.0,73441425.0,71750574.0,69659344.0,69588584.0,71067566.0,70196769.0,75299286.0,73735437.0,71909936.0,69154894.0,69406519.0,71897731.0,68633036.0,75993117.0,74750907.0,72183342.0,71481357.0,70263845.0,72872317.0,69632184.0,76024520.0,75421320.0,73411708.0,70908599.0,70487664.0,72427392.0,70269314.0,75632708.0,75866844.0,73830069.0,71204458.0,70971386.0,73182137.0,71679094.0,75860663.0,76585795.0,74303400.0,71614439.0,70229450.0,73886060.0,70838068.0,75697845.0,75531584.0,96164475.0,70930744.0,70574459.0,72732127.0,69410891.0,76308475.0,74604003.0,72019419.0,70701625.0,70548387.0,72759508.0,69550537.0,76249910.0,74693630.0,73278434.0,71181279.0,71609557.0,72476834.0,70489692.0,76859375.0,75117222.0,73406449.0,71813729.0,71320064.0,72526941.0,71078950.0,75579990.0,74254638.0,73017573.0,70685906.0,70793887.0,72794981.0,69749288.0,75812880.0,75548998.0,72936620.0,71631082.0,70216778.0,72540045.0,70194497.0,75560188.0,74304187.0,72610371.0,70798780.0,69688876.0,71688541.0,68974933.0,74814073.0,75320848.0,71453825.0,69969216.0,70015252.0,72656510.0,69161325.0,74929542.0,73751189.0,72125856.0,70598926.0,68883217.0,72100208.0,69318529.0,74911737.0,73909339.0,71792092.0,70261549.0,69547103.0,70388926.0,67842704.0,74669840.0,72498406.0,72083867.0,68757665.0,68831874.0,70234071.0,68759950.0,74056669.0,72250236.0,70459136.0,69326532.0,68930010.0,69306232.0,66772786.0,73630441.0,72522507.0,69963691.0,67959983.0,67960331.0,69481771.0,67837804.0,72938772.0,71217994.0,68530373.0,67997570.0,65368772.0,68724759.0,66685765.0,73174958.0,71883419.0,68515758.0,66632459.0,66877786.0,68547154.0,66258266.0,71573825.0,70171322.0,67797025.0,67537852.0,65812321.0,68211423.0,65954936.0,71944214.0,71127520.0,69028292.0,67179740.0,65891058.0,67078313.0,64323816.0,70340271.0,69792737.0,67377596.0,65660206.0,65978129.0,67146222.0,64185294.0,70432784.0,69854926.0,66185173.0,65151676.0,65114130.0,66726346.0,64664904.0,68046153.0,68458947.0,65844704.0,63624475.0,62794993.0,64026572.0,61543382.0,66788630.0,65356147.0,62954744.0,61480605.0,59421602.0,61571497.0,58407270.0,63074275.0,61836823.0,59897700.0,59140788.0,57438712.0,59340532.0,57383549.0,61954886.0,62484486.0,60902745.0,59920630.0,58902241.0,61405527.0,59447906.0,65472881.0],"cf_low":[70577565.0,68347156.0,67146242.0,66014596.0,68848247.0,65151062.0,71185471.0,71047794.0,69318751.0,67289640.0,67220964.0,68663696.0,67821893.0,72685928.0,71180835.0,69507661.0,66806447.0,67095968.0,69465514.0,66242834.0,73241140.0,72264727.0,69763616.0,69079009.0,67856869.0,70299126.0,67257943.0,73374474.0,72923335.0,70916721.0,68423327.0,68110984.0,69859848.0,67906248.0,73065539.0,73301070.0,71403186.0,68670832.0,68482371.0,70537561.0,69246913.0,73292347.0,73977836.0,71696325.0,69160656.0,67788976.0,71390732.0,68378891.0,73052126.0,72937828.0,92076663.0,68543930.0,68177097.0,70229500.0,67043420.0,73689979.0,72109409.0,69561223.0,68336820.0,68123767.0,70342432.0,67187425.0,73617897.0,72104682.0,70858697.0,68759499.0,69310877.0,69988289.0,68107134.0,74224289.0,72625512.0,70889928.0,69316750.0,68936870.0,70054955.0,68618664.0,73002888.0,71770360.0,70557249.0,68331695.0,68435056.0,70287615.0,67434990.0,73188717.0,72954386.0,70402793.0,69085060.0,67781510.0,70003828.0,67864519.0,73019893.0,71751067.0,70190529.0,68349766.0,67352046.0,69219392.0,66694091.0,72257277.0,72700947.0,68981822.0,67622162.0,67571238.0,70254033.0,66726939.0,72362398.0,71207628.0,69738475.0,68250033.0,66454705.0,69556028.0,66850170.0,72246523.0,71328854.0,69054041.0,67612066.0,66731339.0,67412887.0,65033199.0,71644653.0,69305783.0,69034165.0,65723029.0,65678609.0,67133627.0,65535299.0,70660946.0,68965058.0,67089846.0,65924324.0,65601217.0,65954395.0,63589808.0,70160165.0,68987564.0,66519262.0,64597897.0,64630875.0,66037653.0,64471889.0,69344343.0,67567687.0,65165432.0,64772691.0,62117747.0,65373624.0,63395496.0,69543546.0,68394667.0,65291387.0,63397883.0,63707289.0,65330699.0,63133576.0,68245867.0,67018503.0,64726436.0,64575524.0,62853023.0,65189051.0,63064667.0,68856598.0,68101204.0,66164501.0,64384837.0,63254834.0,64470060.0,61912777.0,67780250.0,67306986.0,65050281.0,63396872.0,63747125.0,64857833.0,62014449.0,68000192.0,67522099.0,63931980.0,63008196.0,62914571.0,64472394.0,62500823.0,65557239.0,65906814.0,63434891.0,61181112.0,60208090.0,61350925.0,58980611.0,63957604.0,62382637.0,59999326.0,58586570.0,56466951.0,58549125.0,55502329.0,59779294.0,58503333.0,56622512.0,55965939.0,54278211.0,56039965.0,54104237.0,58417373.0,58776352.0,57237576.0,56430081.0,55353943.0,57634343.0,55774636.0,61392894.0],"cf_high":[75859493.0,73321247.0,72079613.0,70881003.0,73738043.0,69782918.0,76220939.0,76034625.0,74156586.0,72169241.0,72059350.0,73490119.0,72698634.0,77874500.0,76241889.0,74419689.0,71552178.0,71898034.0,74449671.0,71171859.0,78652539.0,77396470.0,74689750.0,73886046.0,72770403.0,75483889.0,72014913.0,78684133.0,78070685.0,75927153.0,73384735.0,73045272.0,74962968.0,72727328.0,78310553.0,78570394.0,76411416.0,73655367.0,73379622.0,75775783.0,74150917.0,78559925.0,79200492.0,76887624.0,74037924.0,72816195.0,76358771.0,73298179.0,78435595.0,78156860.0,100499862.0,73486150.0,72985341.0,75397957.0,71831279.0,78969841.0,77260656.0,74626385.0,73150202.0,73061280.0,75274241.0,72007324.0,78861431.0,77228214.0,75888627.0,73737741.0,74198065.0,74933509.0,73019793.0,79537695.0,77752566.0,75984140.0,74265278.0,73852137.0,75073528.0,73498426.0,78239080.0,76846174.0,75657593.0,73229451.0,73244598.0,75386015.0,72184046.0,78481252.0,78098522.0,75517121.0,74068926.0,72717660.0,75191988.0,72788152.0,78153547.0,76884141.0,75167628.0,73297252.0,72154020.0,74180768.0,71423178.0,77498896.0,77902535.0,73939545.0,72437131.0,72386296.0,75326123.0,71589111.0,77453616.0,76291246.0,74710453.0,73070777.0,71365683.0,74664681.0,71814955.0,77715207.0,76771743.0,74617232.0,73189707.0,72362032.0,73270785.0,70639794.0,77910043.0,75807708.0,75334527.0,72064895.0,72248826.0,73481899.0,71984438.0,77693139.0,75857137.0,73975401.0,72857445.0,72413740.0,72943713.0,70191802.0,77594793.0,76484283.0,73570745.0,71671707.0,71634168.0,73132565.0,71369018.0,76748699.0,75131219.0,72158383.0,71622957.0,68838496.0,72458724.0,70267555.0,77095721.0,75412117.0,71986540.0,69962847.0,70167835.0,71974820.0,69471021.0,75066880.0,73553963.0,71137057.0,70678953.0,69025528.0,71395195.0,69033152.0,75202740.0,74188153.0,71955980.0,70065668.0,68619578.0,69806595.0,66852857.0,72932338.0,72259658.0,69822812.0,67989685.0,68340467.0,69559696.0,66357586.0,72925634.0,72301769.0,68572508.0,67513074.0,67452739.0,69029984.0,67054103.0,70603341.0,71100570.0,68504654.0,66307271.0,65354600.0,66934074.0,64312448.0,69953525.0,68454832.0,66062513.0,64740694.0,62547856.0,64894868.0,61604389.0,66697567.0,65595082.0,63467116.0,62738192.0,61010995.0,63096950.0,61040188.0,66012713.0,66554768.0,65163253.0,63962813.0,63094599.0,65725421.0,63611877.0,70327165.0],"observed":[true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,true,true,true,true,true,true,true,true,true,true,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false],"post":[false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true]},"validation_against_truth":{"true_effect_krw_m":-114.7,"true_iroas":1.336,"truth_inside_iroas_ci":true,"truth_inside_ci":true,"naive_error_krw_m":-130.0,"causal_impact_error_krw_m":21.7}},"ch3":{"question":"Reported search revenue jumped after the switch to AI auto-bidding. Did sales?","switch_week":97,"bandwidth_days":28,"platform_view":{"reported_search_revenue_before_krw_m":258.9,"reported_search_revenue_after_krw_m":500.5,"reported_increase_pct":93.3,"reported_roas_before":3.62,"reported_roas_after":6.87,"ad_credited_share_of_revenue_before_pct":13.4,"ad_credited_share_of_revenue_after_pct":23.9,"total_revenue_change_pct_raw":8.5,"brand_search_volume_change_pct":10.3},"total_sales_rdit":{"jump_pct":-0.21,"ci_pct":[-1.97,1.59],"incremental_revenue_4w_krw_m":-4.4,"incremental_ci_krw_m":[-42.2,32.9],"placebo_dates":456,"placebo_p":0.919,"placebo_jumps_pct":[-1.28,-1.45,-1.09,-0.63,-0.23,-0.32,0.09,-0.0,0.15,-0.12,0.02,-0.15,-0.45,-0.19,-0.83,0.02,0.56,0.65,1.15,1.05,0.89,0.65,0.34,0.23,0.52,0.3,0.54,-0.04,0.88,-0.03,-0.28,-0.12,-0.51,-0.33,0.23,-0.45,-1.0,-1.04,-1.44,-1.72,-2.13,-2.24,-1.9,-1.53,-1.44,-2.21,-1.83,-1.85,-1.47,-1.75,-1.22,-0.85,0.56,1.56,2.16,1.88,3.5,3.13,2.93,2.71,2.41,3.21,3.6,3.43,3.89,4.22,4.36,3.97,3.12,2.79,1.34,0.64,0.25,-1.55,-2.77,-3.74,-3.91,-4.05,-3.87,-4.39,-3.34,-2.13,-1.48,-1.37,-0.97,-1.54,-1.31,-1.35,-1.87,-1.43,-1.47,-0.44,0.15,0.6,0.56,0.55,0.98,0.59,0.3,0.25,0.74,0.58,0.76,0.25,0.35,-0.01,-0.71,-0.96,-0.3,0.02,-0.01,0.47,0.56,0.49,0.11,-0.24,-0.46,-0.44,-0.18,-0.09,0.6,0.45,0.71,1.09,1.68,1.7,2.15,2.4,2.61,2.09,1.6,1.16,0.28,-0.56,-1.02,-0.99,-0.78,-1.36,-1.89,-1.6,-1.53,-1.68,-1.93,-2.69,-2.87,-3.21,-2.39,-2.75,-2.67,-2.66,-2.03,-0.87,-0.44,-1.04,-0.63,-0.56,-0.08,0.54,0.87,1.61,1.68,2.64,2.58,2.74,3.56,3.71,4.25,4.97,5.56,5.94,6.21,4.72,3.9,3.45,3.93,2.98,3.52,3.58,3.75,3.0,1.89,0.99,-0.49,-1.46,-1.95,-1.96,-1.92,-1.75,-2.0,-0.85,-2.09,-2.81,-2.89,-2.49,-2.83,-2.57,-2.04,-1.22,-2.55,-2.03,-1.74,-0.85,-1.8,-2.93,-2.1,-0.83,0.19,0.99,2.46,3.35,3.09,2.37,1.95,2.47,2.97,1.57,1.02,-0.03,0.22,1.08,0.07,0.43,0.83,1.03,1.5,1.34,0.57,0.32,-0.89,-2.13,-3.01,-4.03,-4.68,-4.74,-4.49,-4.68,-3.96,-3.64,-2.99,-1.92,-1.31,-0.89,-0.28,-0.58,0.12,0.1,0.46,0.7,1.17,1.72,2.16,1.77,1.41,1.15,1.17,0.46,0.43,0.53,0.77,0.61,0.44,-0.37,-0.71,-1.33,-1.85,-1.86,-1.68,-1.54,-1.84,-1.81,-1.65,-1.46,-1.05,-0.91,-1.18,-0.51,0.51,0.82,1.15,0.85,0.84,0.85,1.5,0.85,1.04,1.48,1.35,0.88,0.44,0.25,-0.09,-0.02,-1.2,-1.82,-1.79,-1.49,-2.27,-2.31,-2.83,-2.58,-1.85,-1.01,-0.7,0.09,0.53,0.76,1.44,1.54,1.39,2.04,2.33,2.47,2.66,3.2,3.75,4.24,3.57,3.17,2.99,3.29,2.41,1.44,0.85,0.44,0.08,-0.22,-0.72,-1.24,-1.02,-1.4,-1.67,-1.98,-2.49,-3.06,-2.7,-2.95,-3.03,-2.88,-2.7,-2.33,-2.2,-2.02,-1.72,-1.32,-1.09,-1.07,-1.11,-1.19,-1.06,-1.07,-0.88,-0.4,0.15,0.66,0.94,1.29,1.2,1.28,0.99,0.55,0.48,1.0,1.09,1.16,0.97,0.93,1.34,0.81,0.06,-0.27,-0.02,0.04,-0.25,-0.77,-0.22,-0.05,0.24,0.51,0.57,1.39,1.5,0.97,0.7,0.44,-0.91,-1.19,-1.58,-1.65,-1.12,-0.22,0.6,1.22,1.47,1.47,1.37,1.05,0.55,0.06,-0.04,0.29,0.28,0.87,1.89,2.0,1.66,2.17,1.97,1.7,1.33,0.75,0.4,-0.3,-0.9,-1.42,-1.71,-1.8,-1.89,-2.46,-2.24,-2.0,-2.53,-2.16,-2.25,-2.65,-2.21,-0.88,-1.09,-0.56,0.39,0.81,1.19,1.25,0.83,1.04,1.34,1.1,1.0,1.32,2.14,2.08,1.94,1.98,1.4,1.26,1.57,0.85,-0.15,0.1,-0.44,-0.86,-0.56,-1.16,-0.6,0.23,0.22,0.33]},"decomposition_4w":{"reported_increase_krw_m":241.6,"true_incremental_krw_m":-4.4,"recredited_krw_m":245.9,"recredited_share_pct":101.8},"budget_increase":{"week":101,"extra_search_spend_4w_krw_m":23.7,"revenue_jump_pct":0.16,"incremental_revenue_4w_krw_m":3.4,"incremental_ci_krw_m":[-8.4,15.2],"marginal_iroas":0.15,"marginal_iroas_ci":[-0.35,0.64],"search_spend_per_sales_before_switch_pct":3.7,"search_spend_per_sales_after_increase_pct":4.4},"series":{"date":["2026-08-10","2026-08-11","2026-08-12","2026-08-13","2026-08-14","2026-08-15","2026-08-16","2026-08-17","2026-08-18","2026-08-19","2026-08-20","2026-08-21","2026-08-22","2026-08-23","2026-08-24","2026-08-25","2026-08-26","2026-08-27","2026-08-28","2026-08-29","2026-08-30","2026-08-31","2026-09-01","2026-09-02","2026-09-03","2026-09-04","2026-09-05","2026-09-06","2026-09-07","2026-09-08","2026-09-09","2026-09-10","2026-09-11","2026-09-12","2026-09-13","2026-09-14","2026-09-15","2026-09-16","2026-09-17","2026-09-18","2026-09-19","2026-09-20","2026-09-21","2026-09-22","2026-09-23","2026-09-24","2026-09-25","2026-09-26","2026-09-27","2026-09-28","2026-09-29","2026-09-30","2026-10-01","2026-10-02","2026-10-03","2026-10-04"],"revenue":[63803362.0,62403011.0,61872040.0,61731656.0,65537177.0,64583089.0,69073735.0,72320285.0,68234365.0,68954829.0,66774020.0,68129475.0,66167442.0,73319286.0,69819762.0,70172247.0,71180952.0,69327996.0,70807285.0,67777891.0,74558002.0,74996534.0,72942830.0,69819524.0,70005429.0,72955857.0,69044841.0,75129132.0,76623981.0,73746290.0,73756127.0,71597085.0,71871912.0,70168685.0,77363574.0,75727730.0,74450988.0,72224744.0,71013635.0,73774373.0,71763705.0,78962245.0,77695576.0,75112648.0,74327013.0,72975461.0,75806611.0,74373239.0,79807941.0,77723462.0,76354965.0,73778000.0,74649244.0,76851957.0,74538093.0,79416753.0],"search_reported":[8135058.0,7987756.0,7934132.0,7932776.0,8189147.0,8093846.0,8510733.0,9476159.0,9346924.0,9428487.0,9354790.0,9530704.0,9366419.0,9972405.0,9688428.0,9610158.0,9617659.0,9510877.0,9672132.0,9432891.0,10005840.0,9960891.0,9759699.0,9552644.0,9547191.0,9775965.0,9488151.0,10022012.0,18759237.0,17993368.0,17575290.0,16999911.0,17006375.0,16554737.0,17871278.0,18071859.0,17770716.0,17390358.0,17190781.0,17726267.0,17284655.0,18695938.0,18176056.0,17615161.0,17403981.0,17171055.0,17702542.0,17343797.0,18484885.0,18794253.0,18500311.0,18079316.0,18197250.0,18663730.0,18175420.0,19281240.0]},"validation_against_truth":{"true_incremental_krw_m":13.2,"true_effect_pct":0.64,"truth_inside_ci":true,"true_recredited_share_pct":94.1,"budget_increase_true_marginal_iroas":0.614,"budget_increase_truth_inside_ci":true}},"ch4":{"question":"How should next year's budget be split?","channels":["search","short_video","social","retargeting"],"calibration_targets":{"geo_test":{"lift_krw_m":64.8,"se_krw_m":16.9},"video_pause":{"lift_krw_m":93.0,"se_krw_m":33.8}},"plan_weekly_spend_krw_m":{"search":19.4,"short_video":25.0,"social":8.3,"retargeting":5.6},"true_roi":{"weeks_1_78":{"search":1.28,"short_video":1.69,"social":1.1,"retargeting":0.55},"weeks_1_104":{"search":1.32,"short_video":1.75,"social":1.14,"retargeting":0.58}},"models":{"before_tests":{"calibrated":false,"fitted_weeks":78,"max_rhat":1.006,"divergences":0,"fit_mape_pct":0.65,"roi":{"search":{"median":1.03,"ci90":[0.39,2.03],"truth":1.28,"truth_inside":true},"short_video":{"median":1.89,"ci90":[1.53,2.38],"truth":1.69,"truth_inside":true},"social":{"median":1.41,"ci90":[0.74,2.38],"truth":1.1,"truth_inside":true},"retargeting":{"median":0.69,"ci90":[0.24,1.85],"truth":0.55,"truth_inside":true}},"experiment_lift_check_krw_m":{"geo_test":{"model":60.5,"model_ci90":[51.4,69.2],"experiment":64.8},"video_pause":{"model":129.2,"model_ci90":[106.2,156.2],"experiment":93.0}},"response_curves":{"search":{"median":[-967.9,-566.3,-311.4,-133.0,0.0,102.1,183.2,249.7,304.4],"low":[-1898.9,-1062.1,-583.7,-250.4,0.0,34.4,60.6,81.3,97.8],"high":[-367.2,-211.4,-112.2,-46.0,0.0,199.3,363.5,502.3,617.7]},"short_video":{"median":[-2228.2,-1205.6,-631.7,-260.3,0.0,193.0,341.7,459.2,554.9],"low":[-2689.4,-1358.4,-732.1,-311.1,0.0,147.4,257.1,341.4,408.3],"high":[-1846.5,-1044.7,-528.5,-210.1,0.0,243.4,439.1,599.5,735.8]},"social":{"median":[-614.5,-374.0,-210.6,-90.9,0.0,71.9,129.8,177.5,217.6],"low":[-1038.1,-578.9,-318.2,-136.0,0.0,37.8,67.7,92.4,112.0],"high":[-325.2,-196.6,-111.0,-48.1,0.0,107.9,196.5,271.9,335.3]},"retargeting":{"median":[-198.4,-115.7,-63.6,-27.1,0.0,20.9,37.4,50.9,62.2],"low":[-533.8,-313.0,-174.6,-74.9,0.0,6.5,11.6,15.7,18.9],"high":[-67.2,-39.4,-21.2,-8.9,0.0,60.9,110.3,151.9,188.2]}},"plans":{"mean":{"multipliers":{"search":0.81,"short_video":1.14,"social":1.28,"retargeting":0.64},"predicted_gain_krw_m":{"median":43.7,"ci90":[-75.3,139.4]},"true_gain_krw_m":12.6,"share_of_best_possible":0.27},"risk_aware":{"multipliers":{"search":0.95,"short_video":1.04,"social":1.11,"retargeting":0.86},"predicted_gain_krw_m":{"median":22.9,"ci90":[-13.6,51.4]},"true_gain_krw_m":14.7,"share_of_best_possible":0.31}},"fitted_weekly":[398.9,457.7,413.5,411.0,407.2,403.4,407.7,408.7,410.6,417.0,415.7,416.6,410.9,415.7,419.8,414.0,417.7,439.8,430.1,432.7,417.5,413.1,410.3,407.5,407.3,403.1,397.9,409.4,407.6,397.4,399.6,399.3,410.1,416.5,425.5,421.0,408.4,387.6,372.2,390.2,418.0,437.1,441.8,446.1,450.4,451.0,454.7,454.8,455.6,457.8,463.2,465.6,470.7,524.4,486.7,495.9,491.7,487.6,487.1,480.6,491.6,487.8,495.3,502.7,505.3,507.4,507.4,513.2,515.1,536.8,511.5,509.9,509.5,501.9,504.8,501.5,502.2,501.4,490.1,478.6,475.6,471.9,468.7,470.8,471.5,470.8,468.1,463.2,430.2,402.5,379.9,393.1,457.9,486.3,498.2,504.9,504.3,510.6,522.0,526.2,529.2,536.6,541.6,546.2]},"after_tests":{"calibrated":true,"fitted_weeks":78,"max_rhat":1.007,"divergences":0,"fit_mape_pct":0.65,"roi":{"search":{"median":1.04,"ci90":[0.39,2.05],"truth":1.28,"truth_inside":true},"short_video":{"median":1.82,"ci90":[1.5,2.24],"truth":1.69,"truth_inside":true},"social":{"median":1.42,"ci90":[0.75,2.43],"truth":1.1,"truth_inside":true},"retargeting":{"median":0.7,"ci90":[0.23,1.85],"truth":0.55,"truth_inside":true}},"experiment_lift_check_krw_m":{"geo_test":{"model":59.8,"model_ci90":[51.3,67.9],"experiment":64.8},"video_pause":{"model":124.7,"model_ci90":[104.6,146.4],"experiment":93.0}},"response_curves":{"search":{"median":[-984.1,-575.3,-315.7,-134.8,0.0,103.5,186.3,253.4,310.7],"low":[-1918.5,-1054.4,-571.9,-245.1,0.0,34.4,60.8,81.7,98.7],"high":[-373.0,-209.4,-112.7,-46.4,0.0,193.4,352.7,486.1,596.4]},"short_video":{"median":[-2158.5,-1197.4,-635.5,-264.1,0.0,197.4,350.5,472.9,572.4],"low":[-2549.5,-1346.3,-733.6,-314.8,0.0,152.5,265.7,353.7,423.2],"high":[-1818.6,-1044.6,-536.4,-214.6,0.0,247.7,448.9,613.5,752.4]},"social":{"median":[-617.8,-375.4,-211.5,-91.5,0.0,71.9,130.0,178.1,218.0],"low":[-1057.7,-586.6,-315.9,-135.7,0.0,36.7,65.4,88.7,107.7],"high":[-327.6,-199.0,-111.2,-47.7,0.0,107.2,196.2,270.8,335.4]},"retargeting":{"median":[-201.5,-116.1,-63.5,-26.9,0.0,20.6,37.1,50.8,62.2],"low":[-534.0,-310.9,-173.3,-75.4,0.0,6.3,11.2,15.1,18.3],"high":[-66.8,-38.4,-20.7,-8.6,0.0,59.6,108.7,149.8,184.3]}},"plans":{"mean":{"multipliers":{"search":0.8,"short_video":1.15,"social":1.26,"retargeting":0.63},"predicted_gain_krw_m":{"median":44.4,"ci90":[-72.8,143.3]},"true_gain_krw_m":13.3,"share_of_best_possible":0.28},"risk_aware":{"multipliers":{"search":0.94,"short_video":1.05,"social":1.11,"retargeting":0.83},"predicted_gain_krw_m":{"median":26.1,"ci90":[-14.2,58.3]},"true_gain_krw_m":17.0,"share_of_best_possible":0.36}},"fitted_weekly":[398.6,457.3,413.1,410.8,407.3,403.5,407.8,408.7,410.7,417.1,415.8,416.7,411.0,415.8,420.0,414.1,417.8,439.9,429.8,432.4,417.4,413.2,410.4,407.6,407.4,403.3,398.0,409.2,407.7,397.5,399.8,399.4,409.9,416.3,425.4,420.9,408.4,387.6,372.2,390.2,418.1,437.2,441.8,446.1,450.4,451.0,454.7,454.8,455.5,457.7,463.1,465.4,470.5,524.3,486.7,495.9,491.7,487.5,487.0,480.7,491.5,487.7,495.2,502.5,505.3,507.3,507.3,513.2,515.2,536.9,511.6,510.0,509.6,502.0,505.0,501.6,502.3,501.5,490.2,478.7,475.7,472.0,468.8,470.9,471.5,470.8,468.1,463.2,430.8,403.6,381.3,394.5,457.7,486.3,498.2,505.0,504.4,510.7,522.2,526.4,529.4,536.8,541.7,546.4]},"all_weeks":{"calibrated":false,"fitted_weeks":104,"max_rhat":1.006,"divergences":0,"fit_mape_pct":0.72,"roi":{"search":{"median":0.93,"ci90":[0.4,1.7],"truth":1.32,"truth_inside":true},"short_video":{"median":1.61,"ci90":[1.4,1.87],"truth":1.75,"truth_inside":true},"social":{"median":1.22,"ci90":[0.6,2.16],"truth":1.14,"truth_inside":true},"retargeting":{"median":0.65,"ci90":[0.23,1.71],"truth":0.58,"truth_inside":true}},"experiment_lift_check_krw_m":{"geo_test":{"model":57.7,"model_ci90":[51.8,63.3],"experiment":64.8},"video_pause":{"model":109.2,"model_ci90":[95.9,122.8],"experiment":93.0}},"response_curves":{"search":{"median":[-897.1,-530.5,-295.2,-126.0,0.0,98.1,176.0,240.5,294.3],"low":[-1625.3,-916.8,-507.8,-220.3,0.0,38.0,67.5,91.0,110.7],"high":[-387.4,-224.9,-120.6,-50.4,0.0,176.7,323.1,444.1,548.6]},"short_video":{"median":[-1938.6,-1177.4,-661.3,-286.0,0.0,225.0,406.7,556.8,682.6],"low":[-2181.0,-1286.0,-734.9,-325.8,0.0,184.5,328.0,442.8,536.9],"high":[-1715.8,-1067.1,-583.6,-245.2,0.0,268.5,494.7,687.1,853.8]},"social":{"median":[-532.8,-320.8,-179.0,-76.6,0.0,59.9,108.3,147.6,180.8],"low":[-940.4,-515.4,-280.3,-119.9,0.0,28.8,51.6,70.4,85.6],"high":[-262.3,-161.0,-89.1,-37.6,0.0,94.8,173.0,238.9,294.5]},"retargeting":{"median":[-187.0,-107.1,-58.2,-24.7,0.0,19.0,34.1,46.5,56.7],"low":[-493.6,-284.2,-157.1,-67.6,0.0,6.3,11.2,15.1,18.2],"high":[-65.8,-37.4,-20.0,-8.4,0.0,52.5,95.4,131.0,161.9]}},"plans":{"mean":{"multipliers":{"search":0.73,"short_video":1.29,"social":1.05,"retargeting":0.55},"predicted_gain_krw_m":{"median":77.1,"ci90":[-75.9,199.0]},"true_gain_krw_m":2.2,"share_of_best_possible":0.05},"risk_aware":{"multipliers":{"search":0.88,"short_video":1.15,"social":1.01,"retargeting":0.72},"predicted_gain_krw_m":{"median":57.1,"ci90":[-15.6,112.8]},"true_gain_krw_m":30.2,"share_of_best_possible":0.64}},"fitted_weekly":[395.5,454.7,410.7,409.5,406.8,403.5,407.8,408.3,410.5,416.5,415.4,416.2,411.3,416.0,419.9,414.4,417.8,440.0,427.8,430.8,417.3,413.2,410.4,407.5,407.4,403.5,398.7,408.1,407.1,397.7,399.8,399.6,408.9,415.1,424.4,420.7,407.8,387.7,372.3,390.0,418.0,437.1,442.3,446.8,451.2,452.0,455.1,455.3,456.1,458.2,463.1,465.8,471.0,525.4,486.8,496.8,492.7,489.1,488.3,482.4,492.3,488.5,495.7,503.2,506.6,508.9,509.0,514.5,516.6,539.5,513.6,512.5,511.4,504.5,506.9,504.1,504.2,503.4,492.1,481.0,477.5,474.0,470.4,472.2,472.7,472.0,469.3,465.0,435.0,408.7,387.3,400.3,457.8,487.7,500.3,506.9,506.8,513.6,524.9,529.2,533.0,540.0,544.9,549.1]}},"true_response_curves":{"multipliers":[0.0,0.25,0.5,0.75,1.0,1.25,1.5,1.75,2.0],"gain_krw_m":{"search":[-1471.4,-840.9,-454.7,-191.5,0.0,145.8,260.5,353.2,429.7],"short_video":[-2200.6,-1341.4,-721.6,-299.0,0.0,220.1,387.7,519.0,624.3],"social":[-530.5,-319.5,-178.0,-76.4,0.0,59.6,107.4,146.5,179.2],"retargeting":[-178.6,-107.4,-59.7,-25.6,0.0,19.9,35.9,49.0,59.9]}},"marginal_roi":{"truth":{"search":0.66,"short_video":0.78,"social":0.62,"retargeting":0.31},"models":{"before_tests":{"search":{"median":0.46,"ci90":[0.16,0.88],"truth_inside":true},"short_video":{"median":0.68,"ci90":[0.54,0.84],"truth_inside":true},"social":{"median":0.75,"ci90":[0.39,1.12],"truth_inside":true},"retargeting":{"median":0.33,"ci90":[0.1,0.93],"truth_inside":true}},"after_tests":{"search":{"median":0.47,"ci90":[0.16,0.86],"truth_inside":true},"short_video":{"median":0.7,"ci90":[0.55,0.85],"truth_inside":true},"social":{"median":0.75,"ci90":[0.39,1.11],"truth_inside":true},"retargeting":{"median":0.32,"ci90":[0.1,0.92],"truth_inside":true}},"all_weeks":{"search":{"median":0.44,"ci90":[0.17,0.78],"truth_inside":true},"short_video":{"median":0.78,"ci90":[0.65,0.91],"truth_inside":true},"social":{"median":0.63,"ci90":[0.3,0.98],"truth_inside":true},"retargeting":{"median":0.3,"ci90":[0.1,0.82],"truth_inside":true}}}},"true_best_plan":{"multipliers":{"search":0.99,"short_video":1.14,"social":0.94,"retargeting":0.5},"true_gain_krw_m":47.1},"weekly_actual":[414.7,458.1,415.5,410.7,406.2,403.0,405.4,406.3,414.4,408.3,413.8,413.4,414.6,416.9,420.1,415.0,412.6,443.8,424.9,433.2,417.0,415.9,413.8,407.1,407.2,407.9,400.6,409.7,403.1,400.4,397.0,394.9,400.8,415.8,421.0,416.2,406.4,385.4,370.5,394.5,418.6,442.6,442.8,440.4,447.3,451.9,458.3,456.6,455.0,462.1,464.8,464.1,469.4,523.0,488.6,495.9,495.5,487.9,489.1,481.8,489.2,492.5,492.6,502.8,496.4,510.6,506.8,515.5,514.2,531.6,504.7,510.6,512.6,505.0,513.4,499.1,504.7,501.9,495.5,477.9,469.5,473.2,472.5,463.5,474.6,472.3,470.9,464.9,439.4,406.0,389.0,403.6,449.0,483.9,493.6,504.9,515.1,517.9,530.1,533.3,540.3,545.4,552.8,554.9]},"cross":{"question":"Each platform reports its own results. Added up, how much do they claim, and what do they add?","period":"weeks 1-78 (before any test)","channels":[{"channel":"search","spend_krw_m":1318.4,"reported_krw_m":4494.6,"reported_roas":3.41,"incremental_krw_m":1369.2,"incremental_ci90_krw_m":[518.9,2701.1],"incremental_roi":1.04,"true_incremental_krw_m":1687.6,"true_roi":1.28,"credit_ratio":3.28,"true_credit_ratio":2.66,"verdict":"over-credited","true_verdict":"over-credited"},{"channel":"short_video","spend_krw_m":1390.9,"reported_krw_m":415.1,"reported_roas":0.3,"incremental_krw_m":2536.3,"incremental_ci90_krw_m":[2080.6,3110.2],"incremental_roi":1.82,"true_incremental_krw_m":2350.6,"true_roi":1.69,"credit_ratio":0.16,"true_credit_ratio":0.18,"verdict":"under-credited","true_verdict":"under-credited"},{"channel":"social","spend_krw_m":646.8,"reported_krw_m":805.0,"reported_roas":1.24,"incremental_krw_m":916.4,"incremental_ci90_krw_m":[486.9,1572.4],"incremental_roi":1.42,"true_incremental_krw_m":711.5,"true_roi":1.1,"credit_ratio":0.88,"true_credit_ratio":1.13,"verdict":"unclear","true_verdict":"over-credited"},{"channel":"retargeting","spend_krw_m":437.5,"reported_krw_m":1211.0,"reported_roas":2.77,"incremental_krw_m":306.5,"incremental_ci90_krw_m":[102.0,809.1],"incremental_roi":0.7,"true_incremental_krw_m":240.6,"true_roi":0.55,"credit_ratio":3.95,"true_credit_ratio":5.03,"verdict":"over-credited","true_verdict":"over-credited"}],"totals":{"spend_krw_m":3793.6,"reported_krw_m":6925.6,"incremental_krw_m":5268.3,"incremental_ci90_krw_m":[4078.4,6853.5],"true_incremental_krw_m":4990.2,"claimed_vs_added":1.31,"claimed_vs_added_ci90":[1.01,1.7],"true_claimed_vs_added":1.39,"revenue_krw_m":34876.0,"share_claimed_by_ads_pct":19.9,"share_added_by_ads_pct":15.1,"true_share_added_by_ads_pct":14.3},"experiment_check":{"short_video_geo_test_iroas":1.2,"short_video_geo_test_ci":[0.58,1.81],"note":"The geo test (weeks 79-84) independently puts short video's return near the model's, far above the 0.30 its platform reports."}},"report":{"to":"PAWLY marketing lead","from":"Measurement team, with the account team","period":"Nov 2024 - Oct 2026 (104 weeks)","bottom_line":["Short-form video pays back in sales: about KRW 1.2 of extra sales per won during the test (range 0.6-1.8), and about 1.5 counting the two weeks after it, when part of the effect lands. The 4-week summer pause cost about KRW 93M in sales (range KRW 32M-KRW 164M), not the KRW 245M a before/after view suggests.","The jump in reported search revenue after switching to AI auto-bidding (+93%) is almost entirely sales that were already happening, now credited to search. Total sales did not move (-0.2%, range -2.0% to +1.6%).","The 30% search budget increase that followed returned about KRW 0.15 per won (range -0.35 to 0.64): below break-even.","Added up, the platforms claim 1.3 times the sales that ads actually added. Short video is the only channel credited with less than it adds. At today's spend, the next won returns less than a won in every channel (model: 0.3-0.8), so shift budget first and then test a smaller total.","In profit terms (gross margin assumed at 40%), short video pays back if a new customer's lifetime purchases reach 1.6x their first; the next won in any channel needs at least 3.2x. Your repeat-purchase data decides whether to add budget."],"korean_summary":["\uc20f\ud3fc \uc601\uc0c1 \uad11\uace0\ub294 \ud6a8\uacfc\uac00 \uc788\uc2b5\ub2c8\ub2e4. \uad11\uace0\ube44 1\uc6d0\ub2f9 \ub9e4\ucd9c\uc774 \uc57d 1.2\uc6d0(\uc2e4\ud5d8 \uc9c1\ud6c4 2\uc8fc\uae4c\uc9c0 \ubcf4\uba74 \uc57d 1.5\uc6d0) \ub298\uc5c8\uc2b5\ub2c8\ub2e4. \uad11\uace0 \ud50c\ub7ab\ud3fc \ud654\uba74\uc5d0\ub294 0.3\uc6d0\uc73c\ub85c \ub098\uc640 \ud06c\uac8c \uacfc\uc18c\ud3c9\uac00\ub418\uc5b4 \uc788\uc2b5\ub2c8\ub2e4.","\uac80\uc0c9 \uad11\uace0\ub97c \uc790\ub3d9 \uc785\ucc30\ub85c \ubc14\uafbc \ub4a4 \ud654\uba74\uc0c1 \ub9e4\ucd9c\uc740 93% \ub298\uc5c8\uc9c0\ub9cc, \uc2e4\uc81c \uc804\uccb4 \ub9e4\ucd9c\uc740 \uadf8\ub300\ub85c\uc600\uc2b5\ub2c8\ub2e4. \uc6d0\ub798 \uc0ac\ub358 \uc190\ub2d8\uc774 \uad11\uace0 \ub355\ubd84\uc73c\ub85c \ub2e4\uc2dc \uc9d1\uacc4\ub41c \uac83\uc785\ub2c8\ub2e4. \uadf8 \uc22b\uc790\ub97c \ubcf4\uace0 \ub298\ub9b0 \uc608\uc0b0\uc740 \ud68c\uc218\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4.","\ub0b4\ub144\uc5d0\ub294 \ub9ac\ud0c0\uae43\ud305\uc744 \uc904\uc774\uace0 \uc20f\ud3fc \uc601\uc0c1\uc744 \ub298\ub9ac\ub418, \ucd1d\uc608\uc0b0\uc740 \uadf8\ub300\ub85c \ub461\ub2c8\ub2e4. \uac80\uc0c9\uc740 \uba3c\uc800 \uc77c\ubd80 \uc9c0\uc5ed\uc5d0\uc11c \uaebc \ubcf4\ub294 \uc2e4\ud5d8\uc73c\ub85c \ud655\uc778\ud55c \ub4a4 \uacb0\uc815\ud569\ub2c8\ub2e4. \uad11\uace0 1\uc6d0\uc744 \ub354 \uc4f8 \ub54c \ub3cc\uc544\uc624\ub294 \ub9e4\ucd9c\uc774 \ubaa8\ub4e0 \ucc44\ub110\uc5d0\uc11c 1\uc6d0\ubcf4\ub2e4 \uc801\uc5b4, \uc7ac\uad6c\ub9e4 \ub370\uc774\ud130\ub85c \uc774\uc775\uc744 \ud655\uc778\ud558\ub294 \uac83\uc774 \ub2e4\uc74c \uc21c\uc11c\uc785\ub2c8\ub2e4."],"measured":[{"question":"Does short video add sales?","method":"Geo test, 20 matched region pairs, 6 weeks","answer":"Yes. iROAS 1.20 (0.58-1.81); 1.52 with a 2-week cooldown; brand searches -5.3% in regions without video","confidence":"High: A/A-checked design, one contaminated pair found and removed"},{"question":"What did the summer pause cost?","method":"Causal impact (Bayesian structural time series)","answer":"KRW 93M (KRW 32M-KRW 164M)","confidence":"Medium: wide range, but consistent with the geo test"},{"question":"Is auto-bidding adding sales?","method":"Total sales around the switch + 456 placebo dates","answer":"No measurable change (-0.2%); placebo p = 0.92","confidence":"High for 'no large effect'; a gain under ~2% cannot be ruled out"},{"question":"How to split next year's budget?","method":"Media mix model checked against both experiments","answer":"Move money from retargeting and search to short video; keep the total flat","confidence":"Medium: search is the least certain channel"}],"recommendation":{"budget":[{"channel":"Search (incl. auto-bidding)","channel_ko":"\uac80\uc0c9 \uad11\uace0(\uc790\ub3d9 \uc785\ucc30 \ud3ec\ud568)","now_krw_m_per_week":19.4,"proposed_krw_m_per_week":17.1,"change_pct":-12},{"channel":"Short-form video","channel_ko":"\uc20f\ud3fc \uc601\uc0c1","now_krw_m_per_week":25.0,"proposed_krw_m_per_week":28.7,"change_pct":15},{"channel":"Social","channel_ko":"\uc18c\uc15c","now_krw_m_per_week":8.3,"proposed_krw_m_per_week":8.4,"change_pct":1},{"channel":"Retargeting","channel_ko":"\ub9ac\ud0c0\uae43\ud305","now_krw_m_per_week":5.6,"proposed_krw_m_per_week":4.0,"change_pct":-28}],"expected_gain_krw_m":{"median":57.1,"ci90":[-15.6,112.8]},"note":"Moves are capped where the model is unsure (risk-aware plan). Revisit search after the next test."},"profit":{"gross_margin_assumed":0.4,"rows":[{"channel":"Search (incl. auto-bidding)","channel_ko":"\uac80\uc0c9 \uad11\uace0(\uc790\ub3d9 \uc785\ucc30 \ud3ec\ud568)","average_return":0.93,"next_won_return":0.44,"lifetime_multiple_needed_average":2.7,"lifetime_multiple_needed_next_won":5.7},{"channel":"Short-form video","channel_ko":"\uc20f\ud3fc \uc601\uc0c1","average_return":1.61,"next_won_return":0.78,"lifetime_multiple_needed_average":1.6,"lifetime_multiple_needed_next_won":3.2},{"channel":"Social","channel_ko":"\uc18c\uc15c","average_return":1.22,"next_won_return":0.63,"lifetime_multiple_needed_average":2.0,"lifetime_multiple_needed_next_won":4.0},{"channel":"Retargeting","channel_ko":"\ub9ac\ud0c0\uae43\ud305","average_return":0.65,"next_won_return":0.3,"lifetime_multiple_needed_average":3.8,"lifetime_multiple_needed_next_won":8.3}],"note":"Returns are in sales, from the 104-week model. A won of ad spend pays back when return x gross margin x lifetime multiple is at least 1. 'Lifetime multiple' = a new customer's total purchases divided by their first, which only PAWLY's own order data can tell. Margin of 40% is a placeholder."},"not_sure":["Search's return is the widest range in the model (90%: 0.4-1.7). A plan built on the model's average alone would cut search 27%; this plan trims it 12% and leaves any bigger cut to the search test.","The pause estimate rests on a model, not a holdout; treat it as supporting the geo test, not replacing it.","Profit depends on repeat buying we have not measured yet; until then, read every return as sales, not profit."],"next_test":{"what":"Search holdout: switch search off in 30% of regions (chosen within size bands) for 6 weeks, plus a 2-week cooldown","why":"Search is where uncertainty costs the most; a direct test settles the next budget decision","eligibility":"A 30% holdout detects a return of 0.75 or more, almost as sensitive as switching off half the regions (0.7), with about 59% of the sales at risk"},"learning_agenda":[{"quarter":"Q1 2027","question":"What does search really add?","study":"Search holdout in 30% of regions, 6 weeks + 2-week cooldown","decides":"Search budget","why_now":"Widest model range of any channel (90%: 0.4-1.7); reported ROAS 3.4"},{"quarter":"Q2 2027","question":"Is the total budget too high?","study":"Step-down test: matched regions run all channels 20% lower for 6 weeks","decides":"Total budget","why_now":"Marginal ROI below 1 in every channel (model 0.3-0.8)"},{"quarter":"Q3 2027","question":"How much of retargeting is re-credited?","study":"Audience holdout: 15% of retargeting audiences not served for 4 weeks","decides":"Retargeting cut size","why_now":"Credited 4x what it adds"},{"quarter":"Q4 2027","question":"What is next year's plan?","study":"Refit the media mix model with every experiment so far as calibration; brand lift survey during a video flight","decides":"2028 budget split and the upper-funnel KPI","why_now":"Each experiment narrows one channel's range; the survey adds the brand side the sales tests miss"}],"asks":["Share the media plan before each test: booked budgets are the denominator of every return figure.","Share gross margin and repeat-purchase rates by first-purchase month, so returns can be read as profit.","Tell us about regional promotions during a test (the G26 retail promotion would have inflated the result by about a quarter).","Keep budgets flat during tests, and send daily total sales from your own order system."],"account_team_notes":["Growth opportunity: short video +15% is about KRW 192M more video spend a year, backed by an experiment, not by the platform's own report.","Position search as 'prove, then reinvest', not as a cut: the holdout either confirms its value or frees budget for video.","The total-budget step-down builds trust: an advertiser who sees us test spending less believes us when we ask for more.","Studies to propose next: 30% regional holdout for search, audience holdout for retargeting, brand lift survey for video, recalibrated MMM.","Reusable for the next client: the study-selection table and the eligibility calculation (power from past weeks, A/A calibration) run on any region-by-day sales table in the same format."]},"validation":{"rows":[{"chapter":1,"quantity":"Short video iROAS (geo test, 19 pairs after check)","naive":"0.30 (platform-reported ROAS)","estimate":1.2,"interval":[0.58,1.81],"truth":1.482,"truth_inside":true},{"chapter":1,"quantity":"Brand-search change in go-dark regions, %","naive":"not measured","estimate":-5.28,"interval":[-6.69,-3.87],"truth":-3.99,"truth_inside":true},{"chapter":2,"quantity":"Revenue lost in the 4-week video pause, KRW M","naive":"-244.7 (before/after)","estimate":-93.0,"interval":[-163.9,-31.5],"truth":-114.7,"truth_inside":true},{"chapter":2,"quantity":"Short video iROAS from the pause","naive":"2.85 (before/after)","estimate":1.08,"interval":[0.37,1.91],"truth":1.336,"truth_inside":true},{"chapter":3,"quantity":"Total-sales effect of the auto-bidding switch, KRW M (4 weeks)","naive":"+241.6 (reported search revenue)","estimate":-4.4,"interval":[-42.2,32.9],"truth":13.2,"truth_inside":true},{"chapter":3,"quantity":"Marginal iROAS of the 30% search budget increase","naive":"6.87 (reported ROAS)","estimate":0.15,"interval":[-0.35,0.64],"truth":0.614,"truth_inside":true},{"chapter":4,"quantity":"Search ROI, weeks 1-78 (calibrated MMM, 90%)","naive":"3.41 (platform-reported ROAS)","estimate":1.04,"interval":[0.39,2.05],"truth":1.28,"truth_inside":true},{"chapter":4,"quantity":"Short video ROI, weeks 1-78 (calibrated MMM, 90%)","naive":"0.30 (platform-reported ROAS)","estimate":1.82,"interval":[1.5,2.24],"truth":1.69,"truth_inside":true},{"chapter":4,"quantity":"Social ROI, weeks 1-78 (calibrated MMM, 90%)","naive":"1.24 (platform-reported ROAS)","estimate":1.42,"interval":[0.75,2.43],"truth":1.1,"truth_inside":true},{"chapter":4,"quantity":"Retargeting ROI, weeks 1-78 (calibrated MMM, 90%)","naive":"2.77 (platform-reported ROAS)","estimate":0.7,"interval":[0.23,1.85],"truth":0.55,"truth_inside":true},{"chapter":4,"quantity":"Revenue added by all ads, weeks 1-78, KRW M (calibrated MMM, 90%)","naive":"6,926 (sum of platform reports)","estimate":5268.3,"interval":[4078.4,6853.5],"truth":4990.2,"truth_inside":true}],"covered":11,"n":11,"checks":{"aa_false_positives_6w":{"uncalibrated":0.176,"calibrated_holdout":0.015},"monte_carlo_60_draws":{"draws":60,"all_pairs":{"mean_bias_iroas":0.341,"rmse_iroas":0.4,"ci_coverage":0.867},"without_contaminated_pair":{"mean_bias_iroas":0.059,"rmse_iroas":0.23,"ci_coverage":0.983},"with_cooldown":{"mean_bias_iroas":0.126,"rmse_iroas":0.299,"ci_coverage":0.983,"test_only_bias_vs_full_effect":-0.151},"diagnostic_flags_promo_pair":0.817,"draws_with_any_false_flag":0.217,"mean_true_iroas":1.483},"budget_plans_share_of_best":{"before_tests":{"mean":0.27,"risk_aware":0.31},"after_tests":{"mean":0.28,"risk_aware":0.36},"all_weeks":{"mean":0.05,"risk_aware":0.64}},"best_possible_gain_krw_m":47.1,"placebo":{"ch2":[{"post_weeks":[70,73],"effect_krw_m":-14.6,"ci_krw_m":[-95.3,61.0],"contains_zero":true},{"post_weeks":[76,78],"effect_krw_m":-18.9,"ci_krw_m":[-65.6,27.3],"contains_zero":true}],"ch3_p":0.919,"ch3_dates":456},"convergence":{"ch2_max_rhat":1.005,"ch2_divergences":0,"ch4_before_tests_max_rhat":1.006,"ch4_after_tests_max_rhat":1.007,"ch4_all_weeks_max_rhat":1.006,"ch4_before_tests_divergences":0,"ch4_after_tests_divergences":0,"ch4_all_weeks_divergences":0}},"video_triangulation":{"rows":[{"source":"Platform-reported ROAS","weeks":"1-78","estimate":0.3,"interval":null,"truth":null,"why":"Counts only clicked sales; misses viewers who buy later"},{"source":"Geo test, 6 test weeks","weeks":"79-84","estimate":1.2,"interval":[0.58,1.81],"truth":1.482,"why":"Cleanest causal read; misses the effect that lands after video is back on"},{"source":"Geo test, + 2-week cooldown","weeks":"79-86","estimate":1.52,"interval":[0.77,2.28],"truth":1.693,"why":"Adds the slower awareness effect; noisier"},{"source":"Pause, causal impact","weeks":"89-92","estimate":1.08,"interval":[0.37,1.91],"truth":1.336,"why":"No holdout, model-based; summer weeks at a lower budget"},{"source":"MMM, calibrated (90%)","weeks":"1-78","estimate":1.82,"interval":[1.5,2.24],"truth":1.69,"why":"Average over 78 weeks at varying budgets, including carry-over"},{"source":"MMM, all weeks (90%)","weeks":"1-104","estimate":1.61,"interval":[1.4,1.87],"truth":1.75,"why":"Average over all 104 weeks; uses the tests' spend swings as data"}],"quote":[1.2,1.52],"spread":[1.08,1.82],"message":"Quote 1.2-1.5 from the experiment (6 weeks, and with the cooldown). Every causal read lands between 1.1 and 1.8, all above break-even on sales; they differ because they cover different weeks, budgets and carry-over, not because they disagree. The platform's 0.30 is the outlier."}},"log":[{"title":"1. Video and search spend moved almost in lockstep (weekly correlation 0.98).","body":"The world is meant to have marketers raise search when video runs, so an observational MMM over-credits search (trap 3). At 0.98 the two channels are indistinguishable even in principle, which is not a fair test of any method. Loosened the coupling to 0.85."},{"title":"2. A/A tests showed a fake positive effect (mean z = +0.95, 22% false positives).","body":"TBR with an intercept, fitted on 12 weeks of daily totals, flattens the slope because the control total carries daily noise (regression dilution). When revenue grows between the pre-period and the test window, the prediction lags behind and the gap looks like a positive effect, whichever group is \"treated\". Switched to the proportional form (no intercept). Mean A/A z fell to about 0.05."},{"title":"3. The interval was still too narrow (about 1.5x).","body":"The AR(1) correction handles day-to-day correlation but not slow drift between region groups (regions differ in growth and in how much of their revenue comes from ads, so flights move them differently). Multiplied the standard error by a factor learned from A/A tests of the same length: learned on the earlier half of past windows, checked on the later half. Held-out false positives: 0.4-2.5% depending on length (target 5%; slightly conservative)."},{"title":"4. Removing the contaminated pair moved the estimate away from the truth.","body":"The pair diagnostic flagged pair 6 (control region G26 ran 18% above the other controls; robust z = -3.5): the planted retail promotion. With all pairs the iROAS read 1.49 against a true 1.48; without pair 6 it read 1.20. One simulated test is one draw of noise, so this cannot say which procedure is right. Re-ran the same design on 60 fresh noise draws: with the contaminated pair the iROAS is biased by +0.34 on average and the 95% interval covers the truth 87% of the time; without it, bias +0.06 and coverage 98%. The first draw simply had the promotion's upward bias cancel a low noise draw. The diagnostic catches the promotion in 82% of draws but also flags a clean pair in 22%, so the rule is \"check with the advertiser, then drop\", not \"drop automatically\"."},{"title":"5. Grading a trimmed estimate against the all-region truth is unfair.","body":"Dropping a pair also drops its go-dark region. Each estimate is now graded against the true iROAS of exactly the regions it covers (stored per region in the truth file)."},{"title":"6. CausalImpact sampler: 24 divergences.","body":"Raised target acceptance to 0.99 and tuning to 1,500 steps: 0 divergences, R-hat 1.003. The geo-test weeks plus two weeks of carry-over are masked out of the pre-period, since half the regions had no video then."},{"title":"7. Wrong denominator for the pause iROAS.","body":"\"What would have been spent\" was first estimated from older weeks (KRW 126M); the booked budget that was cancelled was KRW 86M. An advertiser knows this from its media plan, so the plan is now an input (data/media_plan.json). iROAS moved from 0.73 to 1.09 (truth 1.34, inside the interval [0.36, 1.89])."},{"title":"8. After the auto-bidding switch, total sales rose 8.5% on a raw before/after view.","body":"That rise is short video coming back after the pause, not the switch. The regression discontinuity (separate slopes on each side, category searches as control) measures -0.2% [-2.0%, +1.6%]; truth +0.64%. 456 placebo dates give p = 0.92. About 95-100% of the +93% reported increase is sales already happening, now credited to auto-bidding (truth 94%)."},{"title":"9. Calibration looked useless at first, because the model was fitted on the wrong weeks.","body":"Fitted on all 104 weeks, the uncalibrated model already got short video right (ROI 1.61 vs true 1.75): the geo test and the 4-week pause are themselves big swings in video spend, so the data contained natural experiments. The question an advertiser actually faces is different: the model built on the 78 weeks before any test, versus the same model calibrated with the test results. Restructured the chapter around that comparison (before_tests / after_tests), with all_weeks kept as a reference."},{"title":"10. Calibration moved little, and the reason is worth showing.","body":"Before any test, the model's predicted loss for the geo-test weeks was KRW 60.5M; the test measured 64.8M. The model already agreed with the experiment, so calibration narrowed the video interval (90%: 1.53-2.38 to 1.50-2.24) without moving it much. For the pause, the model predicted 129M against a measured 93.0M (truth 114.7M); calibration pulled it to 125M. (Figures as of the refit in entry 15.) A calibration term is only as strong as the experiment's interval."},{"title":"11. Trap 3 did not do what it was designed to do.","body":"Video and search spend move together (weekly correlation 0.85). The plan was that an observational model would hand video's effect to search. It did not: search came out *under*-valued (ROI 1.03 vs true 1.28; the response curve is about 30% too flat) and became the least certain channel (90% interval 0.39-2.03). Kept the result as it is rather than tuning the world until the trap fires."},{"title":"12. The expected-gain budget plan captured only a fraction of the possible gain.","body":"Each model's plan was run through the real world. Maximizing the expected gain cut search to 0.81x, following the under-valued median: true gain KRW 12.6-13.3M, 27-28% of the best possible 47.1M (all_weeks model: 5%). The model's own 90% interval for that gain, -75M to +140M, already said the move was a coin flip. Added a risk-aware plan that maximizes mean - 0.84 sd (about the 20th percentile), so budget moves only where the model is confident: 31% of the best gain for the before-test model, 36% for the calibrated after-test model, 64% for the all-weeks model (figures as of the refit in entry 15). The next experiment should be on search, the channel whose uncertainty costs the most."},{"title":"13. The brand-search lift had no truth to be graded against.","body":"Chapter 1 reported a brand-search effect, but the truth file only held revenue. Added region-level truth for brand searches; the estimate after the check is -5.3% (95%: -6.7% to -3.9%) against a true -4.0%. With it, all 10 headline intervals on the scorecard contain the truth."},{"title":"14. The first readout contradicted itself.","body":"It recommended trimming search by 12% while warning that cutting search would be a gamble. Rewrote the line to say what the plan actually does: a plan built on the model's average would cut search 27%; the risk-aware plan trims it 12% and leaves any bigger cut to the search test."},{"title":"15. Moved shared data preparation into SQL, and checked nothing changed.","body":"National daily and weekly tables, the pair diagnostic (median and MAD in SQL) and the platform-claims table now come from sql/marts.sql in DuckDB. Every mart matched the earlier pandas results exactly, and chapters 1 and 3 reproduced byte for byte. Chapter 2 differed only by sampler noise when re-run (pause loss -93.6M to -93.0M, same interval and verdict); the calibrated MMM was refitted to the new figure so the chapters stay consistent."},{"title":"16. The cross-platform verdict for social was wrong at first.","body":"Calling a channel under- or over-credited by comparing its report with the model's median put social in \"under-credited\" (model ROI 1.42 vs reported 1.24); the truth (1.10) says slightly over-credited. The report sits inside the model's 90% range, so the verdict now uses the range: under or over only when the report falls outside it, otherwise \"unclear\". Short video: under-credited (reported 0.30, model 1.50-2.24). Search and retargeting: over-credited 3-4x."},{"title":"17. Every channel's marginal ROI is below 1.","body":"Average ROI says which channels paid back; marginal ROI says where the next won should go. At today's budget the truth is 0.31-0.78 across channels, and all three models' 90% ranges sit below 1 (calibrated model covers the truth for 4 of 4). Reallocation within a fixed total is the first step; the total budget itself is worth testing lower. Added to the readout."},{"title":"18. The 6-week geo read missed the part of video's effect that lands after the test.","body":"Video's awareness effect builds and fades slowly, so when video came back on in weeks 85-86 the go-dark regions were still behind: 12.5% of the true loss falls after the test. Added a second read over the test plus a 2-week cooldown, using the 8-week A/A calibration factor: iROAS 1.52 (95%: 0.77-2.28) against a true 1.69. Over 60 noise draws the 6-week read understates the fuller effect by 0.15 on average; the 8-week read runs 0.13 high and is noisier (RMSE 0.30 vs 0.23), with the same 98% coverage. Both are reported rather than picking the flattering one."},{"title":"19. \"Next test\" was a single item; an advertiser needs a sequence.","body":"Added a 2027 learning agenda to the readout, one study per quarter, each tied to the number that justifies it: search holdout (widest model range), total-budget step-down (marginal ROI below 1 everywhere), retargeting audience holdout (credited about 4x what it adds), then a recalibrated MMM with a brand lift survey for the upper funnel."},{"title":"20. Two limits were true but unstated.","body":"The causal-impact control series follows true demand with only 5% noise, cleaner than any real covariate. And the geo readout uses TBR with A/A calibration rather than Trimmed Match, which would trim outlier pairs automatically; here the pair diagnostic and an advertiser check do it by hand. Both are now written on the page and in the README."},{"title":"21. The 50% go-dark design was not the cheapest that works.","body":"A teammate's first question: would an account team accept switching video off in half the regions? Compared design options on the same history and A/A calibration. A 30% go-dark share (chosen within size bands) detects a return of 0.75 against 0.70 for half the regions, with about 60% of the sales at risk. In hindsight it was the better recommendation; the next test in the agenda uses it. A heavy-up, which never switches video off, reads the marginal return and can only detect 1.40 or more, above every channel's marginal return here, so it would come back \"no effect\"."},{"title":"22. Every return was in sales, none in profit.","body":"An iROAS of 1.2 is not profit. With gross margin only the advertiser knows (40% used as a placeholder), the readout now states how much repeat buying each channel needs to pay back: short video needs a new customer's lifetime purchases to reach 1.6x their first; the next won in any channel needs 3x or more. Margin and repeat rates are added to what the advertiser is asked to provide."},{"title":"23. The readout spoke to analysts, not to a small-business owner.","body":"Added a three-sentence Korean summary in plain words (no iROAS, no intervals) at the top of the readout, and a full Korean version in docs/advertiser_readout_ko.md. Also added a playbook row for advertisers below the geo-test threshold: platform conversion lift or a planned on/off period read, with the warning that an underpowered test should read \"can't tell yet\", not \"no effect\"."},{"title":"24. The readout had no answer to \"what does this mean for the account?\"","body":"Added internal notes for the account team: the growth opportunity (short video +15%, about KRW 192M more a year, backed by an experiment), positioning the search holdout as \"prove, then reinvest\" rather than a cut, why a budget step-down test builds trust, the studies to propose next, and which parts are reusable for the next client."}]}</script>
+<script>
+const D = JSON.parse(document.getElementById("data").textContent);
+const NS = "http://www.w3.org/2000/svg";
+const $ = (id) => document.getElementById(id);
+const fmt = (v, d = 1) => (v == null ? "–" : Number(v).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d }));
+const krw = (v) => `KRW ${fmt(v, 1)}M`;
+const range = (a, d = 2) => `${fmt(a[0], d)} to ${fmt(a[1], d)}`;
+const CH = { search: "Search", short_video: "Short video", social: "Social", retargeting: "Retargeting" };
+
+// ------------------------------------------------------------ helpers
+function el(tag, attrs = {}, parent, text) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (text != null) e.textContent = text;
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function lin(d0, d1, r0, r1) { const f = (v) => r0 + ((v - d0) / (d1 - d0)) * (r1 - r0); f.inv = (p) => d0 + ((p - r0) / (r1 - r0)) * (d1 - d0); return f; }
+function niceTicks(min, max, n = 6) {
+  const span = max - min, raw = span / n, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => span / s <= n) || 10 * mag;
+  const out = []; for (let v = Math.ceil(min / step) * step; v <= max + 1e-9; v += step) out.push(+v.toFixed(10));
+  return out;
+}
+function frame(svg, { xd, yd, m = { l: 52, r: 18, t: 14, b: 34 }, xt, yt, xfmt = (v) => v, yfmt = (v) => v, xlab, ylab }) {
+  const vb = svg.viewBox.baseVal, W = vb.width, H = vb.height;
+  const x = lin(xd[0], xd[1], m.l, W - m.r), y = lin(yd[0], yd[1], H - m.b, m.t);
+  const g = el("g", {}, svg);
+  for (const t of yt || niceTicks(yd[0], yd[1])) {
+    el("line", { x1: m.l, x2: W - m.r, y1: y(t), y2: y(t), stroke: "var(--grid)", "stroke-width": 1 }, g);
+    el("text", { x: m.l - 8, y: y(t) + 4, "text-anchor": "end" }, g, yfmt(t));
+  }
+  el("line", { x1: m.l, x2: W - m.r, y1: H - m.b, y2: H - m.b, stroke: "var(--axis)", "stroke-width": 1 }, g);
+  for (const t of xt || niceTicks(xd[0], xd[1])) el("text", { x: x(t), y: H - m.b + 18, "text-anchor": "middle" }, g, xfmt(t));
+  if (xlab) el("text", { x: W - m.r, y: H - 2, "text-anchor": "end" }, g, xlab);
+  if (ylab) el("text", { x: m.l, y: m.t - 4, "text-anchor": "start" }, g, ylab);
+  return { x, y, W, H, m };
+}
+function path(xs, ys, x, y) { return xs.map((v, i) => `${i ? "L" : "M"}${x(v).toFixed(1)},${y(ys[i]).toFixed(1)}`).join(""); }
+function band(xs, lo, hi, x, y) {
+  return path(xs, hi, x, y) + xs.slice().reverse().map((v, i) => `L${x(v).toFixed(1)},${y(lo[xs.length - 1 - i]).toFixed(1)}`).join("") + "Z";
+}
+const tip = $("tip");
+function showTip(html, ev) {
+  tip.innerHTML = html; tip.style.display = "block";
+  const r = tip.getBoundingClientRect();
+  let left = ev.clientX + 14, top = ev.clientY + 14;
+  if (left + r.width > innerWidth - 8) left = ev.clientX - r.width - 14;
+  if (top + r.height > innerHeight - 8) top = ev.clientY - r.height - 14;
+  tip.style.left = left + "px"; tip.style.top = top + "px";
+}
+function hideTip() { tip.style.display = "none"; }
+function hover(node, html) {
+  node.style.cursor = "default";
+  node.addEventListener("pointermove", (e) => showTip(html, e));
+  node.addEventListener("pointerleave", hideTip);
+}
+function crosshair(svg, fr, xs, render) {
+  const g = el("g", {}, svg);
+  const line = el("line", { y1: fr.m.t, y2: fr.H - fr.m.b, stroke: "var(--axis)", "stroke-width": 1, visibility: "hidden" }, g);
+  const rect = el("rect", { x: fr.m.l, y: fr.m.t, width: fr.W - fr.m.l - fr.m.r, height: fr.H - fr.m.t - fr.m.b, fill: "transparent" }, svg);
+  rect.addEventListener("pointermove", (e) => {
+    const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+    const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+    const v = fr.x.inv(p.x);
+    let i = 0, best = Infinity;
+    xs.forEach((xv, k) => { const dd = Math.abs(xv - v); if (dd < best) { best = dd; i = k; } });
+    line.setAttribute("x1", fr.x(xs[i])); line.setAttribute("x2", fr.x(xs[i])); line.setAttribute("visibility", "visible");
+    showTip(render(i), e);
+  });
+  rect.addEventListener("pointerleave", () => { line.setAttribute("visibility", "hidden"); hideTip(); });
+}
+function table(target, headers, rows, numeric = []) {
+  const t = typeof target === "string" ? $(target) : target;
+  const isTable = t.tagName === "TABLE";
+  const tbl = isTable ? t : document.createElement("table");
+  tbl.innerHTML = "<thead><tr>" + headers.map((h) => `<th>${h}</th>`).join("") + "</tr></thead><tbody>" +
+    rows.map((r) => `<tr${r.hl ? ' class="hl"' : ""}>` + (r.cells || r).map((c, i) => `<td${numeric.includes(i) ? ' class="n"' : ""}>${c}</td>`).join("") + "</tr>").join("") + "</tbody>";
+  if (!isTable) { t.innerHTML = ""; t.appendChild(tbl); }
+}
+function tiles(target, items) {
+  $(target).innerHTML = items.map((it) => `<div class="tile ${it.cls || ""}"><span class="k">${it.k}</span><span class="v">${it.v}</span>${it.s ? `<span class="s">${it.s}</span>` : ""}</div>`).join("");
+}
+const inside = (ok) => (ok ? '<span class="ok">✓ inside</span>' : '<span class="miss">✕ outside</span>');
+
+// ------------------------------------------------------------ tabs
+document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => {
+  document.querySelectorAll(".tabs button").forEach((x) => x.setAttribute("aria-selected", x === b));
+  document.querySelectorAll(".view").forEach((v) => (v.hidden = v.id !== "view-" + b.dataset.tab));
+  try { localStorage.setItem("pawly-tab", b.dataset.tab); } catch (e) {}
+}));
+try { const saved = localStorage.getItem("pawly-tab"); if (saved) document.querySelector(`.tabs button[data-tab="${saved}"]`)?.click(); } catch (e) {}
+
+// ------------------------------------------------------------ start
+(function start() {
+  const V = D.validation, r1 = D.ch1_readout.after_check.revenue, c3 = D.ch3, xp = D.cross.totals;
+  tiles("findings", [
+    { cls: "naive", k: "Short video looked like a loser", v: `0.30 → ${fmt(r1.iroas, 2)}`,
+      s: `Platform-reported ROAS vs the geo test's incremental return (truth ${fmt(D.ch1_readout.validation_against_truth.after_check.truth, 2)}). Video pays back.` },
+    { cls: "naive", k: "Auto-bidding's +93% added no sales", v: `${fmt(c3.total_sales_rdit.jump_pct, 1)}%`,
+      s: `Change in total sales at the switch (truth ${fmt(c3.validation_against_truth.true_effect_pct, 2)}%). The reported jump was re-credited sales.` },
+    { cls: "naive", k: "Platforms claim more than ads add", v: `${fmt(xp.claimed_vs_added, 1)}×`,
+      s: `Revenue all platforms report vs revenue ads actually added (truth ${fmt(xp.true_claimed_vs_added, 1)}×).` },
+  ]);
+  table("scorecard", ["Ch.", "Question", "Naive answer", "This study", "Interval", "Truth", ""],
+    V.rows.map((r) => { const d = Math.abs(r.truth) >= 10 ? 1 : 2;
+      return [r.chapter, r.quantity, r.naive, fmt(r.estimate, d), range(r.interval, d), fmt(r.truth, d), inside(r.truth_inside)]; }), [0, 3, 5]);
+  const T = V.video_triangulation;
+  $("tri-note").textContent = T.message;
+  table("tri", ["Source", "Weeks", "Return per won", "Interval", "Truth, same weeks", "Why it differs"],
+    T.rows.map((r, i) => ({ hl: i === 1 || i === 2, cells: [r.source, r.weeks, fmt(r.estimate, 2), r.interval ? range(r.interval) : "–",
+      r.truth == null ? "–" : fmt(r.truth, 2), r.why] })), [2, 4]);
+  table("playbook", ["Question", "Study", "Use when", "Eligibility", "Watch out for"],
+    D.playbook.rows.map((r) => [`<b>${r.question}</b>`, `${r.method}<br><span class="small">Chapter ${r.chapter}</span>`, r.use_when, r.eligibility, r.watch_out]));
+})();
+
+// ------------------------------------------------------------ geo
+(function geo() {
+  const des = D.ch1_design, rd = D.ch1_readout, mc = D.ch1_montecarlo;
+  const a = rd.after_check.revenue, v = rd.validation_against_truth;
+  $("geo-q").textContent = "Does short-form video drive incremental revenue for PAWLY?";
+  $("geo-answer").innerHTML = `Yes. Switching video off in 20 matched regions for 6 weeks cost ${krw(-a.effect_krw_m)} of sales (${fmt(a.effect_pct, 1)}%),
+    an incremental return of <b>${fmt(a.iroas, 2)}</b> per won (95%: ${range(a.iroas_ci)}). The platform reports 0.30. True value for these regions: ${fmt(v.after_check.truth, 2)}.`;
+
+  // power curves
+  const svg = $("power"), xs = des.power_curves.deltas_pct, P = des.power_curves.revenue;
+  const fr = frame(svg, { xd: [0, 8], yd: [0, 1], yt: [0, 0.2, 0.4, 0.6, 0.8, 1], yfmt: (t) => `${t * 100}%`, xfmt: (t) => `${t}%`, xlab: "true revenue drop in go-dark regions" });
+  el("line", { x1: fr.m.l, x2: fr.W - fr.m.r, y1: fr.y(0.8), y2: fr.y(0.8), stroke: "var(--ink-2)", "stroke-width": 1 }, svg);
+  el("text", { x: fr.m.l + 4, y: fr.y(0.8) - 5, class: "lab" }, svg, "80% power");
+  const weeks = ["2", "4", "8", "6"];
+  for (const w of weeks) {
+    const main = w === "6";
+    el("path", { d: path(xs, P[w], fr.x, fr.y), fill: "none", stroke: main ? "var(--est)" : "var(--other)", "stroke-width": main ? 2.5 : 1.5 }, svg);
+  }
+  // direct labels at each line's MDE
+  for (const e of des.eligibility) {
+    if (e.mde_revenue_pct == null) continue;
+    const main = e.weeks === 6;
+    el("circle", { cx: fr.x(e.mde_revenue_pct), cy: fr.y(0.8), r: main ? 4.5 : 3, fill: main ? "var(--est)" : "var(--other)", stroke: "var(--surface)", "stroke-width": 2 }, svg);
+  }
+  const six6 = des.eligibility.find((e) => e.weeks === 6);
+  el("text", { x: fr.x(six6.mde_revenue_pct) + 8, y: fr.y(0.8) + 16, class: "lab-strong" }, svg, `6 weeks: MDE ${fmt(six6.mde_revenue_pct, 1)}%`);
+  crosshair(svg, fr, xs, (i) => `<b>True drop ${fmt(xs[i], 1)}%</b><br>` + ["2", "4", "6", "8"].map((w) => `${w} weeks: ${Math.round(P[w][i] * 100)}%`).join("<br>"));
+  table("power-table", ["Drop", "2 wk", "4 wk", "6 wk", "8 wk"],
+    xs.filter((_, i) => i % 5 === 0).map((x0) => { const i = xs.indexOf(x0); return [`${fmt(x0, 1)}%`, ...["2", "4", "6", "8"].map((w) => `${Math.round(P[w][i] * 100)}%`)]; }), [1, 2, 3, 4]);
+
+  table("elig", ["Length", "MDE revenue", "MDE KRW", "Min. detectable iROAS", "Brand-search MDE", "Revenue at risk*"],
+    des.eligibility.map((e) => ({ hl: e.weeks === 6, cells: [`${e.weeks} weeks`, `${fmt(e.mde_revenue_pct, 1)}%`, `${fmt(e.mde_revenue_krw_m, 1)}M`, fmt(e.min_detectable_iroas, 2), `${fmt(e.mde_brand_search_pct, 1)}%`, `${fmt(e.revenue_at_risk_krw_m[0], 0)}-${fmt(e.revenue_at_risk_krw_m[1], 0)}M`] })), [1, 2, 3, 4, 5]);
+  const six = des.eligibility.find((e) => e.weeks === 6);
+  $("aa-note").innerHTML = `*If the true iROAS is 0.5-2.0. A/A tests (past windows with nothing injected): the standard interval cried wolf in
+    ${fmt(six.aa_false_positive_uncalibrated * 100, 0)}% of 6-week windows; after calibration, ${fmt(six.aa_false_positive_holdout * 100, 1)}% on held-out windows (target 5%).
+    Eligibility rule: at least KRW ${fmt(six.min_national_video_budget_for_iroas1_m_per_day, 2)}M/day of national video for 6 weeks.`;
+
+  // design options
+  const opts = des.design_options;
+  table("options", ["Design", "Reads", "Weeks", "Video in test regions", "MDE", "Min. detectable return", "Spend moved", "Sales at risk*"],
+    opts.map((o, i) => ({ hl: i === 0, cells: [o.design, o.measures, o.weeks, `${o.treated_share_of_video_pct}%`, `${fmt(o.mde_revenue_pct, 1)}%`,
+      fmt(o.min_detectable_return, 2), `${fmt(o.spend_moved_krw_m, 0)}M ${o.revenue_at_risk_krw_m ? "withheld" : "added"}`,
+      o.revenue_at_risk_krw_m ? `${fmt(o.revenue_at_risk_krw_m[0], 0)}-${fmt(o.revenue_at_risk_krw_m[1], 0)}M` : "none"] })), [2, 4, 5]);
+  const o30 = opts.find((o) => o.design.startsWith("Go-dark, 30%") && o.weeks === 6), hu = opts.find((o) => o.design.startsWith("Heavy-up"));
+  $("options-note").textContent = `*If the true return is 0.5-2.0. A 30% go-dark share reads almost as finely (${fmt(o30.min_detectable_return, 2)} vs ${fmt(opts[0].min_detectable_return, 2)}) with about ${Math.round(100 * o30.spend_moved_krw_m / opts[0].spend_moved_krw_m)}% of the sales at risk, an easier ask for the advertiser; in hindsight it was the better recommendation, and the next test uses it. A heavy-up never switches video off but reads the marginal return, and it can only detect ${fmt(hu.min_detectable_return, 2)} or more; with marginal returns below 1 (chapter 4) it would come back "no effect".`;
+
+  // pair diagnostic
+  const pd = rd.pair_diagnostics, ps = $("pairs");
+  const z = pd.robust_z, zmin = Math.min(-4, ...z) - 0.3, zmax = Math.max(4, ...z) + 0.3;
+  const fp = frame(ps, { xd: [0.5, 20.5], yd: [zmin, zmax], xt: [1, 5, 10, 15, 20], xlab: "pair (largest regions first)" });
+  el("rect", { x: fp.m.l, width: fp.W - fp.m.l - fp.m.r, y: fp.y(3), height: fp.y(-3) - fp.y(3), fill: "var(--shade)" }, ps);
+  el("text", { x: fp.W - fp.m.r - 4, y: fp.y(3) + 13, "text-anchor": "end", class: "lab" }, ps, "normal noise (|z| ≤ 3)");
+  el("line", { x1: fp.m.l, x2: fp.W - fp.m.r, y1: fp.y(0), y2: fp.y(0), stroke: "var(--axis)" }, ps);
+  const flagged = new Set(pd.flagged.map((f) => f.pair));
+  pd.pairs.forEach((p, i) => {
+    const f = flagged.has(p);
+    const c = el("circle", { cx: fp.x(p), cy: fp.y(z[i]), r: f ? 6 : 4.5, fill: f ? "var(--naive)" : "var(--est)", stroke: "var(--surface)", "stroke-width": 2 }, ps);
+    const hit = el("circle", { cx: fp.x(p), cy: fp.y(z[i]), r: 12, fill: "transparent" }, ps);
+    hover(hit, `<b>Pair ${p}</b><br>robust z ${fmt(z[i], 2)}<br>ratio change ${fmt(pd.log_ratio_change[i] * 100, 1)}%`);
+  });
+  for (const f of pd.flagged) {
+    const i = pd.pairs.indexOf(f.pair);
+    el("text", { x: fp.x(f.pair) + 10, y: fp.y(z[i]) + 4, class: "lab-strong" }, ps, `Pair ${f.pair}: control ${f.control} +${fmt(f.control_vs_other_controls_pct, 0)}%`);
+  }
+  table("pairs-table", ["Pair", "Robust z", "Ratio change"], pd.pairs.map((p, i) => [p, fmt(z[i], 2), `${fmt(pd.log_ratio_change[i] * 100, 1)}%`]), [0, 1, 2]);
+
+  const all = rd.all_pairs.revenue;
+  tiles("geo-tiles", [
+    { cls: "est", k: "iROAS after the check (19 pairs)", v: fmt(a.iroas, 2), s: `95%: ${range(a.iroas_ci)}` },
+    { cls: "", k: "iROAS with all 20 pairs", v: fmt(all.iroas, 2), s: `95%: ${range(all.iroas_ci)}` },
+    { cls: "truth", k: "True iROAS, the 19 pairs", v: fmt(v.after_check.truth, 2), s: "from the simulated world" },
+    { cls: "est", k: "Brand searches, go-dark regions", v: `${fmt(rd.after_check.brand_search.effect_pct, 1)}%`, s: `truth ${fmt(v.brand_search_after_check.truth_pct, 1)}%` },
+    { cls: "est", k: "iROAS incl. 2-week cooldown", v: fmt(rd.with_cooldown.revenue.iroas, 2), s: `95%: ${range(rd.with_cooldown.revenue.iroas_ci)} · truth ${fmt(rd.with_cooldown.truth_iroas, 2)}` },
+  ]);
+  const f0 = pd.flagged[0];
+  $("geo-flag").innerHTML = f0 ? `Pair ${f0.pair} stood out (z = ${fmt(f0.robust_z, 1)}): control region ${f0.control} ran ${fmt(f0.control_vs_other_controls_pct, 0)}% above the other controls.
+    The advertiser confirmed a retail partner's promotion there in weeks 80-83, so the pair was excluded. With it, the all-pair estimate happens to land on the truth; the next table shows that was luck.` : "";
+  table("mc", ["Readout", "Average bias", "Error (RMSE)", "95% interval covers truth"], [
+    ["All 20 pairs (promotion included)", `+${fmt(mc.all_pairs.mean_bias_iroas, 2)}`, fmt(mc.all_pairs.rmse_iroas, 2), `${fmt(mc.all_pairs.ci_coverage * 100, 0)}%`],
+    { hl: true, cells: ["Without the contaminated pair", `+${fmt(mc.without_contaminated_pair.mean_bias_iroas, 2)}`, fmt(mc.without_contaminated_pair.rmse_iroas, 2), `${fmt(mc.without_contaminated_pair.ci_coverage * 100, 0)}%`] },
+    ["Same, test + 2-week cooldown (vs the fuller effect)", `+${fmt(mc.with_cooldown.mean_bias_iroas, 2)}`, fmt(mc.with_cooldown.rmse_iroas, 2), `${fmt(mc.with_cooldown.ci_coverage * 100, 0)}%`],
+  ], [1, 2, 3]);
+  $("mc-note").textContent = `Same regions, design and promotion on ${mc.draws} fresh noise draws. The diagnostic flags the promotion pair in ${fmt(mc.diagnostic_flags_promo_pair * 100, 0)}% of draws, and a clean pair in ${fmt(mc.draws_with_any_false_flag * 100, 0)}%: confirm with the advertiser, then drop. `
+    + `Part of video's effect lands after the test (${fmt(rd.with_cooldown.share_of_loss_after_test_pct, 0)}% in this draw), so the 6-week read understates the fuller effect by ${fmt(-mc.with_cooldown.test_only_bias_vs_full_effect, 2)} on average; the 8-week read gets closer but is noisier. Both are reported.`;
+})();
+
+// ------------------------------------------------------------ pause
+(function pause() {
+  const c = D.ch2, ci = c.causal_impact, v = c.validation_against_truth, s = c.series;
+  $("pause-q").textContent = c.question;
+  $("pause-answer").innerHTML = `About ${krw(-ci.effect_krw_m)} of sales (95%: ${krw(-ci.ci_krw_m[1])} to ${krw(-ci.ci_krw_m[0])}), an iROAS of <b>${fmt(ci.iroas, 2)}</b> on the cancelled budget.
+    A before/after comparison says ${krw(-c.naive_before_after.effect_krw_m)}, because the pause fell in the summer dip. Truth: ${krw(-v.true_effect_krw_m)}.`;
+  const svg = $("ci-chart"), n = s.date.length, xs = [...Array(n).keys()];
+  const div = (a) => a.map((x) => x / 1e6);
+  const act = div(s.actual), med = div(s.cf_median), lo = div(s.cf_low), hi = div(s.cf_high);
+  const ymin = Math.min(...act, ...lo) * 0.95, ymax = Math.max(...act, ...hi) * 1.03;
+  const monthTicks = xs.filter((i) => s.date[i].endsWith("-01"));
+  const fr = frame(svg, { xd: [0, n - 1], yd: [ymin, ymax], xt: monthTicks, xfmt: (i) => new Date(s.date[i]).toLocaleString("en-US", { month: "short" }), m: { l: 52, r: 18, t: 24, b: 30 } });
+  const spans = (flag) => { const out = []; let st = null; flag.forEach((f, i) => { if (f && st == null) st = i; if ((!f || i === n - 1) && st != null) { out.push([st, f ? i : i - 1]); st = null; } }); return out; };
+  const masked = s.observed.map((o, i) => !o && !s.post[i]);
+  for (const [a0, a1] of spans(masked)) {
+    el("rect", { x: fr.x(a0), width: fr.x(a1) - fr.x(a0), y: fr.m.t, height: fr.H - fr.m.t - fr.m.b, fill: "var(--shade)" }, svg);
+    el("text", { x: (fr.x(a0) + fr.x(a1)) / 2, y: fr.m.t - 8, "text-anchor": "middle", class: "lab" }, svg, "masked: geo test");
+  }
+  for (const [a0, a1] of spans(s.post)) {
+    el("rect", { x: fr.x(a0), width: fr.x(a1) - fr.x(a0), y: fr.m.t, height: fr.H - fr.m.t - fr.m.b, fill: "var(--shade-2)" }, svg);
+    el("text", { x: (fr.x(a0) + fr.x(a1)) / 2, y: fr.m.t - 8, "text-anchor": "middle", class: "lab-strong" }, svg, "video paused");
+  }
+  el("path", { d: band(xs, lo, hi, fr.x, fr.y), fill: "var(--est-band)" }, svg);
+  el("path", { d: path(xs, med, fr.x, fr.y), fill: "none", stroke: "var(--est)", "stroke-width": 2 }, svg);
+  el("path", { d: path(xs, act, fr.x, fr.y), fill: "none", stroke: "var(--ink)", "stroke-width": 1.5 }, svg);
+  crosshair(svg, fr, xs, (i) => `<b>${s.date[i]}</b><br>Actual ${fmt(act[i], 1)}M<br>Counterfactual ${fmt(med[i], 1)}M (${fmt(lo[i], 1)}-${fmt(hi[i], 1)})`);
+  table("ci-table", ["Date", "Actual (M)", "Counterfactual (M)", "95% range"],
+    xs.filter((i) => s.post[i]).map((i) => [s.date[i], fmt(act[i], 1), fmt(med[i], 1), `${fmt(lo[i], 1)}-${fmt(hi[i], 1)}`]), [1, 2]);
+  tiles("pause-tiles", [
+    { cls: "naive", k: "Before/after comparison", v: krw(c.naive_before_after.effect_krw_m), s: `iROAS ${fmt(c.naive_before_after.iroas, 2)}` },
+    { cls: "est", k: "Causal impact", v: krw(ci.effect_krw_m), s: `95%: ${fmt(ci.ci_krw_m[0], 0)} to ${fmt(ci.ci_krw_m[1], 0)}M · iROAS ${fmt(ci.iroas, 2)}` },
+    { cls: "truth", k: "Truth", v: krw(v.true_effect_krw_m), s: `iROAS ${fmt(v.true_iroas, 2)}` },
+  ]);
+  table("placebo", ["Fake pause (weeks)", "Effect found", "95% range", "Contains zero"],
+    c.placebo_checks.map((p) => [`${p.post_weeks[0]}-${p.post_weeks[1]}`, krw(p.effect_krw_m), `${fmt(p.ci_krw_m[0], 0)} to ${fmt(p.ci_krw_m[1], 0)}M`, p.contains_zero ? '<span class="ok">✓ yes</span>' : '<span class="miss">✕ no</span>']), [1]);
+})();
+
+// ------------------------------------------------------------ auto-bidding
+(function auto() {
+  const c = D.ch3, pv = c.platform_view, r = c.total_sales_rdit, dec = c.decomposition_4w, bu = c.budget_increase, v = c.validation_against_truth;
+  $("auto-q").textContent = c.question;
+  $("auto-answer").innerHTML = `No. Reported search revenue rose ${fmt(pv.reported_increase_pct, 0)}% and reported ROAS went from ${fmt(pv.reported_roas_before, 2)} to ${fmt(pv.reported_roas_after, 2)},
+    but total sales jumped <b>${fmt(r.jump_pct, 1)}%</b> (95%: ${fmt(r.ci_pct[0], 1)}% to ${fmt(r.ci_pct[1], 1)}%). Truth: ${fmt(v.true_effect_pct, 2)}%.`;
+  const s = c.series, n = s.date.length, xs = [...Array(n).keys()].map((i) => i - 28);
+  const roll = (a) => a.map((_, i) => { const w = a.slice(Math.max(0, i - 6), i + 1); return w.reduce((p, q) => p + q, 0) / w.length; });
+  const idx = (a) => { const base = a.slice(0, 28).reduce((p, q) => p + q, 0) / 28; return roll(a).map((x) => (100 * x) / base); };
+  const rev = idx(s.revenue), rep = idx(s.search_reported);
+  const svg = $("auto-chart");
+  const fr = frame(svg, { xd: [-28, 27], yd: [80, Math.max(...rep) * 1.05], xt: [-28, -14, 0, 14, 27], xfmt: (t) => (t === 0 ? "switch" : `${t > 0 ? "+" : ""}${t}d`) });
+  el("line", { x1: fr.x(0), x2: fr.x(0), y1: fr.m.t, y2: fr.H - fr.m.b, stroke: "var(--ink-2)", "stroke-width": 1 }, svg);
+  el("path", { d: path(xs, rep, fr.x, fr.y), fill: "none", stroke: "var(--naive)", "stroke-width": 2 }, svg);
+  el("path", { d: path(xs, rev, fr.x, fr.y), fill: "none", stroke: "var(--ink)", "stroke-width": 2 }, svg);
+  el("text", { x: fr.x(27) - 2, y: fr.y(rep[n - 1]) - 8, "text-anchor": "end", class: "lab-strong" }, svg, `reported ${fmt(rep[n - 1], 0)}`);
+  el("text", { x: fr.x(27) - 2, y: fr.y(rev[n - 1]) + 16, "text-anchor": "end", class: "lab-strong" }, svg, `total ${fmt(rev[n - 1], 0)}`);
+  el("text", { x: fr.x(2), y: fr.y(rev[30]) + 30, class: "lab" }, svg, "steady rise, no jump at the switch");
+  crosshair(svg, fr, xs, (i) => `<b>${s.date[i]}</b><br>Reported search: ${fmt(rep[i], 0)}<br>Total revenue: ${fmt(rev[i], 0)}`);
+
+  // placebo histogram
+  const pj = r.placebo_jumps_pct, lo = Math.floor(Math.min(...pj, r.jump_pct)), hi = Math.ceil(Math.max(...pj, r.jump_pct));
+  const bw = 0.5, bins = []; for (let b = lo; b < hi; b += bw) bins.push({ a: b, b: b + bw, n: pj.filter((x) => x >= b && x < b + bw).length });
+  const hs = $("placebo-hist"), maxN = Math.max(...bins.map((b) => b.n));
+  const fh = frame(hs, { xd: [lo, hi], yd: [0, maxN * 1.15], xfmt: (t) => `${t}%`, ylab: "past dates" });
+  for (const b of bins) {
+    const x0 = fh.x(b.a) + 1, x1 = fh.x(b.b) - 1;
+    const rect = el("rect", { x: x0, width: Math.max(1, x1 - x0), y: fh.y(b.n), height: fh.y(0) - fh.y(b.n), fill: "var(--other)", rx: 2 }, hs);
+    hover(rect, `<b>${fmt(b.a, 1)}% to ${fmt(b.b, 1)}%</b><br>${b.n} past dates`);
+  }
+  el("line", { x1: fh.x(r.jump_pct), x2: fh.x(r.jump_pct), y1: fh.m.t, y2: fh.H - fh.m.b, stroke: "var(--est)", "stroke-width": 2.5 }, hs);
+  el("text", { x: fh.x(r.jump_pct) + 6, y: fh.m.t + 12, class: "lab-strong" }, hs, `switch: ${fmt(r.jump_pct, 1)}% (p = ${fmt(r.placebo_p, 2)})`);
+
+  tiles("auto-tiles", [
+    { cls: "naive", k: "Reported increase", v: `+${krw(dec.reported_increase_krw_m)}`, s: `ad-credited share of sales ${fmt(pv.ad_credited_share_of_revenue_before_pct, 1)}% → ${fmt(pv.ad_credited_share_of_revenue_after_pct, 1)}%` },
+    { cls: "est", k: "Measured extra sales", v: krw(dec.true_incremental_krw_m), s: `95%: ${fmt(r.incremental_ci_krw_m[0], 0)} to ${fmt(r.incremental_ci_krw_m[1], 0)}M` },
+    { cls: "truth", k: "True extra sales", v: krw(v.true_incremental_krw_m), s: `re-credited share ${fmt(v.true_recredited_share_pct, 0)}%` },
+  ]);
+  tiles("up-tiles", [
+    { cls: "naive", k: "Reported ROAS that prompted it", v: fmt(pv.reported_roas_after, 2) },
+    { cls: "est", k: "Marginal iROAS of the extra budget", v: fmt(bu.marginal_iroas, 2), s: `95%: ${range(bu.marginal_iroas_ci)}` },
+    { cls: "truth", k: "True marginal iROAS", v: fmt(v.budget_increase_true_marginal_iroas, 2), s: "below break-even" },
+  ]);
+  $("up-note").textContent = `Search budget +30% from week ${bu.week} (KRW ${fmt(bu.extra_search_spend_4w_krw_m, 1)}M extra over 4 weeks). Search spend per won of sales rose from ${fmt(bu.search_spend_per_sales_before_switch_pct, 1)}% to ${fmt(bu.search_spend_per_sales_after_increase_pct, 1)}%. A raw before/after view of total sales would credit the switch with +${fmt(pv.total_revenue_change_pct_raw, 1)}%: that is short video returning after the pause.`;
+})();
+
+// ------------------------------------------------------------ budget
+(function budget() {
+  const c = D.ch4, B = c.models.before_tests, A = c.models.after_tests, W = c.models.all_weeks, chs = c.channels;
+  $("budget-q").textContent = c.question;
+  const fin = W.plans.risk_aware;
+  $("budget-answer").innerHTML = `Shift money from retargeting and some search into short video, keeping the total flat, and move only where the model is confident.
+    Run through the true world, that plan earns ${krw(fin.true_gain_krw_m)} a year, <b>${fmt(fin.share_of_best_possible * 100, 0)}%</b> of the best possible ${krw(c.true_best_plan.true_gain_krw_m)};
+    the plan that follows the model's average earns ${fmt(W.plans.mean.share_of_best_possible * 100, 0)}%.`;
+
+  // ROI dot-whisker
+  const X = D.cross, svg = $("roi"), naive = Object.fromEntries(X.channels.map((r) => [r.channel, r.reported_roas]));
+  const t = X.totals;
+  tiles("xp-tiles", [
+    { cls: "naive", k: "Revenue all platforms claim", v: krw(t.reported_krw_m), s: `${fmt(t.share_claimed_by_ads_pct, 1)}% of sales` },
+    { cls: "est", k: "Revenue ads actually added", v: krw(t.incremental_krw_m), s: `90%: ${fmt(t.incremental_ci90_krw_m[0], 0)} to ${fmt(t.incremental_ci90_krw_m[1], 0)}M · ${fmt(t.share_added_by_ads_pct, 1)}% of sales` },
+    { cls: "truth", k: "Truth", v: krw(t.true_incremental_krw_m), s: `${fmt(t.true_share_added_by_ads_pct, 1)}% of sales` },
+    { cls: "", k: "Claimed ÷ added", v: `${fmt(t.claimed_vs_added, 2)}×`, s: `truth ${fmt(t.true_claimed_vs_added, 2)}×` },
+  ]);
+  const VERDICT = { "under-credited": "Under-credited: headroom", "over-credited": "Over-credited", unclear: "Unclear: report inside the model's range" };
+  table("xp-table", ["Channel", "Spend, M", "Claimed, M", "Reported ROAS", "Added, M (90%)", "Model ROI", "True ROI", "Claimed ÷ added", "Verdict", "Truth says"],
+    X.channels.map((r) => [CH[r.channel], fmt(r.spend_krw_m, 0), fmt(r.reported_krw_m, 0), fmt(r.reported_roas, 2),
+      `${fmt(r.incremental_krw_m, 0)} (${fmt(r.incremental_ci90_krw_m[0], 0)}-${fmt(r.incremental_ci90_krw_m[1], 0)})`,
+      fmt(r.incremental_roi, 2), fmt(r.true_roi, 2), `${fmt(r.credit_ratio, 2)}×`, VERDICT[r.verdict], r.true_verdict]), [1, 2, 3, 5, 6, 7]);
+  const under = X.channels.filter((r) => r.verdict === "under-credited").map((r) => CH[r.channel].toLowerCase());
+  const unclear = X.channels.filter((r) => r.verdict === "unclear").map((r) => CH[r.channel].toLowerCase());
+  $("xp-note").textContent = `The platforms' claims add up to ${fmt(t.claimed_vs_added, 2)} times what ads added (90%: ${fmt(t.claimed_vs_added_ci90[0], 2)}-${fmt(t.claimed_vs_added_ci90[1], 2)}×). `
+    + (under.length ? `Only ${under.join(" and ")} is credited with less than it adds: that is where the headroom is. ` : "")
+    + (unclear.length ? `For ${unclear.join(" and ")} the report sits inside the model's range, so no call is made. ` : "")
+    + `Ranking channels by their own reported ROAS would put money in the wrong places. ${X.experiment_check.note}`;
+
+  const MR = c.marginal_roi;
+  table("mroi", ["Channel", "Before tests (90%)", "After tests, calibrated (90%)", "All 104 weeks (90%)", "Truth"],
+    chs.map((ch) => [CH[ch], ...["before_tests", "after_tests", "all_weeks"].map((n) => `${fmt(MR.models[n][ch].median, 2)} (${range(MR.models[n][ch].ci90)})`), `<b>${fmt(MR.truth[ch], 2)}</b>`]), [4]);
+  const covered = Object.values(MR.models.after_tests).filter((v) => v.truth_inside).length;
+  const allBelow = chs.every((ch) => MR.models.all_weeks[ch].ci90[1] < 1);
+  const order = chs.slice().sort((p, q) => MR.models.all_weeks[q].median - MR.models.all_weeks[p].median).map((ch) => CH[ch].toLowerCase());
+  $("mroi-note").textContent = `The calibrated model's interval holds the true marginal ROI for ${covered} of 4 channels. `
+    + (allBelow ? `At today's budget the next won returns less than a won in every channel (all 90% ranges below 1). Moving money from ${order[order.length - 1]} toward ${order[0]} helps, and the total budget itself is worth testing lower. ` : "")
+    + "Average ROI (chart below) says which channels paid back so far; marginal ROI says where the next won should go.";
+  const xmax = Math.max(3.6, ...chs.map((ch) => Math.max(A.roi[ch].ci90[1], B.roi[ch].ci90[1], naive[ch]))) * 1.03;
+  const fr = frame(svg, { xd: [0, xmax], yd: [0, chs.length], yt: [], m: { l: 96, r: 18, t: 10, b: 30 }, xlab: "return per won" });
+  for (const t of niceTicks(0, xmax)) el("line", { x1: fr.x(t), x2: fr.x(t), y1: fr.m.t, y2: fr.H - fr.m.b, stroke: "var(--grid)" }, svg);
+  el("line", { x1: fr.x(1), x2: fr.x(1), y1: fr.m.t, y2: fr.H - fr.m.b, stroke: "var(--ink-2)" }, svg);
+  el("text", { x: fr.x(1) + 4, y: fr.m.t + 10, class: "lab" }, svg, "break-even");
+  chs.forEach((ch, i) => {
+    const yc = fr.y(chs.length - i - 0.5);
+    el("text", { x: fr.m.l - 10, y: yc + 4, "text-anchor": "end", class: "lab-strong" }, svg, CH[ch]);
+    [[B, -9, "var(--other)"], [A, 7, "var(--est)"]].forEach(([M, dy, col]) => {
+      const r = M.roi[ch];
+      el("line", { x1: fr.x(r.ci90[0]), x2: fr.x(r.ci90[1]), y1: yc + dy, y2: yc + dy, stroke: col, "stroke-width": 2.5, "stroke-linecap": "round" }, svg);
+      el("circle", { cx: fr.x(r.median), cy: yc + dy, r: 4.5, fill: col, stroke: "var(--surface)", "stroke-width": 2 }, svg);
+    });
+    el("line", { x1: fr.x(A.roi[ch].truth), x2: fr.x(A.roi[ch].truth), y1: yc - 17, y2: yc + 15, stroke: "var(--ink)", "stroke-width": 2.5 }, svg);
+    el("circle", { cx: fr.x(naive[ch]), cy: yc - 1, r: 5, fill: "none", stroke: "var(--naive)", "stroke-width": 2 }, svg);
+    const hit = el("rect", { x: fr.m.l, width: fr.W - fr.m.l - fr.m.r, y: yc - 22, height: 44, fill: "transparent" }, svg);
+    hover(hit, `<b>${CH[ch]}</b><br>Before tests: ${fmt(B.roi[ch].median, 2)} (${range(B.roi[ch].ci90)})<br>After tests: ${fmt(A.roi[ch].median, 2)} (${range(A.roi[ch].ci90)})<br>Truth: ${fmt(A.roi[ch].truth, 2)}<br>Platform-reported: ${fmt(naive[ch], 2)}`);
+  });
+  table("roi-table", ["Channel", "Before tests (90%)", "After tests (90%)", "Truth", "Platform-reported"],
+    chs.map((ch) => [CH[ch], `${fmt(B.roi[ch].median, 2)} (${range(B.roi[ch].ci90)})`, `${fmt(A.roi[ch].median, 2)} (${range(A.roi[ch].ci90)})`, fmt(A.roi[ch].truth, 2), fmt(naive[ch], 2)]), [3, 4]);
+
+  // response curves
+  const seg = $("curve-seg"), M = c.true_response_curves.multipliers;
+  function drawCurve(ch) {
+    const svg2 = $("curve"); svg2.innerHTML = "";
+    const r = A.response_curves[ch], t = c.true_response_curves.gain_krw_m[ch];
+    const lo = Math.min(...r.low, ...t), hi = Math.max(...r.high, ...t);
+    const f2 = frame(svg2, { xd: [0, 2], yd: [lo * 1.05, hi * 1.1], xt: [0, 0.5, 1, 1.5, 2], xfmt: (v) => `${v}×`, yfmt: (v) => fmt(v, 0), xlab: "budget vs today" });
+    el("line", { x1: f2.x(1), x2: f2.x(1), y1: f2.m.t, y2: f2.H - f2.m.b, stroke: "var(--axis)" }, svg2);
+    el("text", { x: f2.x(1) + 4, y: f2.m.t + 10, class: "lab" }, svg2, "today");
+    el("path", { d: band(M, r.low, r.high, f2.x, f2.y), fill: "var(--est-band)" }, svg2);
+    el("path", { d: path(M, r.median, f2.x, f2.y), fill: "none", stroke: "var(--est)", "stroke-width": 2 }, svg2);
+    el("path", { d: path(M, t, f2.x, f2.y), fill: "none", stroke: "var(--ink)", "stroke-width": 2 }, svg2);
+    crosshair(svg2, f2, M, (i) => `<b>${CH[ch]} ${M[i]}×</b><br>Model: ${fmt(r.median[i], 0)}M (${fmt(r.low[i], 0)} to ${fmt(r.high[i], 0)})<br>Truth: ${fmt(t[i], 0)}M`);
+    seg.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.ch === ch));
+  }
+  seg.innerHTML = chs.map((ch) => `<button data-ch="${ch}" aria-pressed="false">${CH[ch]}</button>`).join("");
+  seg.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => drawCurve(b.dataset.ch)));
+  drawCurve("search");
+
+  // plans
+  const rows = [];
+  const label = { before_tests: "Before tests (78 wk)", after_tests: "After tests, calibrated (78 wk)", all_weeks: "All 104 weeks" };
+  for (const [name, m] of Object.entries(c.models)) for (const [kind, p] of Object.entries(m.plans)) {
+    rows.push({ hl: name === "all_weeks" && kind === "risk_aware", cells: [label[name], kind === "mean" ? "Expected gain" : "Risk-aware",
+      ...chs.map((ch) => `${fmt(p.multipliers[ch], 2)}×`), `${fmt(p.predicted_gain_krw_m.median, 0)} (${fmt(p.predicted_gain_krw_m.ci90[0], 0)} to ${fmt(p.predicted_gain_krw_m.ci90[1], 0)})`,
+      fmt(p.true_gain_krw_m, 1), `${fmt(p.share_of_best_possible * 100, 0)}%`] });
+  }
+  rows.push({ cells: ["Best possible (truth)", "–", ...chs.map((ch) => `${fmt(c.true_best_plan.multipliers[ch], 2)}×`), "–", fmt(c.true_best_plan.true_gain_krw_m, 1), "100%"] });
+  table("plans", ["Model", "Plan", ...chs.map((ch) => CH[ch]), "Model's predicted gain, M (90%)", "True gain, M", "Of best"], rows, [2, 3, 4, 5, 6, 7, 8]);
+  $("plans-note").textContent = "Search is the least certain channel, and the models under-value it. Plans that follow the average cut search hard and lose most of the possible gain; risk-aware plans move less and keep more. The next experiment should be on search.";
+})();
+
+// ------------------------------------------------------------ readout memo
+(function memo() {
+  const r = D.report;
+  const g = r.recommendation.expected_gain_krw_m;
+  $("memo").innerHTML = `
+    <div><div class="eyebrow">Measurement readout · fictional brand, synthetic data</div><h2 style="margin-top:4px">PAWLY: what the ads really did, and what to do next</h2></div>
+    <dl><dt>To</dt><dd>${r.to}</dd><dt>From</dt><dd>${r.from}</dd><dt>Period</dt><dd>${r.period}</dd></dl>
+    <section class="aside" lang="ko"><h3>사장님용 세 줄 요약 (Korean summary for the business owner)</h3><ol style="margin:0;padding-left:20px;display:grid;gap:6px">${r.korean_summary.map((s) => `<li>${s}</li>`).join("")}</ol>
+      <p class="small">Full Korean readout: docs/advertiser_readout_ko.md</p></section>
+    <section><h3>Bottom line</h3><ul>${r.bottom_line.map((b) => `<li>${b}</li>`).join("")}</ul></section>
+    <section><h3>What we measured</h3><div class="tbl"><table><thead><tr><th>Question</th><th>Method</th><th>Answer</th><th>Confidence</th></tr></thead><tbody>
+      ${r.measured.map((m) => `<tr><td>${m.question}</td><td>${m.method}</td><td>${m.answer}</td><td>${m.confidence}</td></tr>`).join("")}</tbody></table></div></section>
+    <section><h3>Recommendation for next year</h3><div class="tbl"><table><thead><tr><th>Channel</th><th>Now, KRW M/week</th><th>Proposed</th><th>Change</th></tr></thead><tbody>
+      ${r.recommendation.budget.map((b) => `<tr><td>${b.channel}</td><td class="n">${fmt(b.now_krw_m_per_week, 1)}</td><td class="n">${fmt(b.proposed_krw_m_per_week, 1)}</td><td class="n">${b.change_pct > 0 ? "+" : ""}${b.change_pct}%</td></tr>`).join("")}</tbody></table></div>
+      <p class="note" style="margin-top:6px">Expected extra sales over a year: ${krw(g.median)} (90%: ${fmt(g.ci90[0], 0)} to ${fmt(g.ci90[1], 0)}M). ${r.recommendation.note}</p></section>
+    <section><h3>Does it pay? Sales returns in profit terms</h3><div class="tbl"><table><thead><tr><th>Channel</th><th>Sales per won (average)</th><th>Sales per next won</th><th>Lifetime multiple needed (average)</th><th>Lifetime multiple needed (next won)</th></tr></thead><tbody>
+      ${r.profit.rows.map((p) => `<tr><td>${p.channel}</td><td class="n">${fmt(p.average_return, 2)}</td><td class="n">${fmt(p.next_won_return, 2)}</td><td class="n">${fmt(p.lifetime_multiple_needed_average, 1)}×</td><td class="n">${fmt(p.lifetime_multiple_needed_next_won, 1)}×</td></tr>`).join("")}</tbody></table></div>
+      <p class="note" style="margin-top:6px">${r.profit.note}</p></section>
+    <section><h3>What we are not sure about</h3><ul>${r.not_sure.map((x) => `<li>${x}</li>`).join("")}</ul></section>
+    <section><h3>Next test</h3><p><b>${r.next_test.what}.</b> ${r.next_test.why}. ${r.next_test.eligibility}.</p></section>
+    <section><h3>Learning agenda for 2027</h3><div class="tbl"><table><thead><tr><th>Quarter</th><th>Question</th><th>Study</th><th>Decides</th><th>Why now</th></tr></thead><tbody>
+      ${r.learning_agenda.map((a) => `<tr><td>${a.quarter}</td><td>${a.question}</td><td>${a.study}</td><td>${a.decides}</td><td>${a.why_now}</td></tr>`).join("")}</tbody></table></div></section>
+    <section><h3>What we need from you</h3><ul>${r.asks.map((x) => `<li>${x}</li>`).join("")}</ul></section>`;
+  $("ae-notes").innerHTML = `
+    <div><div class="eyebrow">Internal · not sent to the advertiser</div><h2 style="margin-top:4px">Notes for the account team</h2></div>
+    <ul>${r.account_team_notes.map((x) => `<li>${x}</li>`).join("")}</ul>`;
+})();
+
+// ------------------------------------------------------------ checks
+(function checks() {
+  const C = D.validation.checks, V = D.validation;
+  const div = Object.entries(C.convergence).filter(([k]) => k.includes("divergences")).reduce((s, [, v]) => s + v, 0);
+  const rh = Math.max(...Object.entries(C.convergence).filter(([k]) => k.includes("rhat")).map(([, v]) => v));
+  tiles("check-tiles", [
+    { cls: "est", k: "Headline numbers whose interval holds the truth", v: `${V.covered} of ${V.n}` },
+    { cls: "est", k: "A/A false positives, 6-week geo test", v: `${fmt(C.aa_false_positives_6w.calibrated_holdout * 100, 1)}%`, s: `before calibration ${fmt(C.aa_false_positives_6w.uncalibrated * 100, 0)}%` },
+    { cls: "est", k: "Interval coverage over 60 luck draws", v: `${fmt(C.monte_carlo_60_draws.without_contaminated_pair.ci_coverage * 100, 0)}%`, s: "geo test, after the check" },
+    { cls: "est", k: "Placebo dates, auto-bidding check", v: `${C.placebo.ch3_dates}`, s: `p = ${fmt(C.placebo.ch3_p, 2)}` },
+    { cls: "est", k: "Sampler health (Bayesian fits)", v: `${div} divergences`, s: `max R-hat ${fmt(rh, 3)}` },
+  ]);
+  $("log").innerHTML = D.log.map((e) => `<article><h3>${e.title}</h3><p>${e.body}</p></article>`).join("");
+})();
+</script>
+</body>
+</html>

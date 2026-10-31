@@ -1,0 +1,193 @@
+{
+  "question": "Does short-form video drive incremental revenue for PAWLY?",
+  "test_weeks": [
+    79,
+    84
+  ],
+  "all_pairs": {
+    "revenue": {
+      "effect_krw_m": -80.4,
+      "ci_krw_m": [
+        -113.3,
+        -47.5
+      ],
+      "effect_pct": -5.48,
+      "iroas": 1.49,
+      "iroas_ci": [
+        0.88,
+        2.1
+      ],
+      "significant": true,
+      "video_withheld_krw_m": 53.9
+    },
+    "brand_search": {
+      "effect": -36895,
+      "effect_pct": -6.41,
+      "significant": true
+    }
+  },
+  "pair_diagnostics": {
+    "log_ratio_change": [
+      -0.0226,
+      -0.0273,
+      -0.0598,
+      -0.0495,
+      -0.0663,
+      -0.1961,
+      -0.098,
+      -0.0275,
+      0.0113,
+      -0.0633,
+      -0.0111,
+      -0.0907,
+      -0.066,
+      -0.0948,
+      -0.0602,
+      -0.0112,
+      -0.0361,
+      -0.033,
+      -0.0621,
+      -0.0154
+    ],
+    "robust_z": [
+      0.79,
+      0.68,
+      -0.13,
+      0.13,
+      -0.29,
+      -3.5,
+      -1.07,
+      0.67,
+      1.63,
+      -0.21,
+      1.08,
+      -0.89,
+      -0.28,
+      -1.0,
+      -0.14,
+      1.08,
+      0.46,
+      0.54,
+      -0.19,
+      0.97
+    ],
+    "pairs": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20
+    ],
+    "flagged": [
+      {
+        "pair": 6,
+        "go_dark": "G28",
+        "control": "G26",
+        "robust_z": -3.5,
+        "suspect_side": "control",
+        "control_vs_other_controls_pct": 18.0
+      }
+    ]
+  },
+  "after_check": {
+    "note": "Advertiser confirmed a retail partner promotion in the flagged control region during weeks 80-83; pair excluded.",
+    "revenue": {
+      "effect_krw_m": -60.8,
+      "ci_krw_m": [
+        -92.1,
+        -29.6
+      ],
+      "effect_pct": -4.47,
+      "iroas": 1.2,
+      "iroas_ci": [
+        0.58,
+        1.81
+      ],
+      "significant": true,
+      "video_withheld_krw_m": 50.8
+    },
+    "brand_search": {
+      "effect": -28193,
+      "effect_pct": -5.28,
+      "ci_pct": [
+        -6.69,
+        -3.87
+      ],
+      "significant": true
+    },
+    "leave_one_pair_out_iroas": [
+      1.2,
+      1.63
+    ]
+  },
+  "with_cooldown": {
+    "weeks": [
+      79,
+      86
+    ],
+    "revenue": {
+      "effect_krw_m": -77.5,
+      "ci_krw_m": [
+        -115.8,
+        -39.1
+      ],
+      "effect_pct": -4.27,
+      "iroas": 1.52,
+      "iroas_ci": [
+        0.77,
+        2.28
+      ],
+      "significant": true,
+      "video_withheld_krw_m": 50.8
+    },
+    "truth_iroas": 1.693,
+    "share_of_loss_after_test_pct": 12.5
+  },
+  "validation_against_truth": {
+    "note": "Each estimate is graded against the true iROAS of the regions it covers.",
+    "true_effect_pct_all": -5.46,
+    "true_brand_search_effect_all": -22402,
+    "all_pairs": {
+      "estimate": 1.49,
+      "truth": 1.483,
+      "ci": [
+        0.88,
+        2.1
+      ]
+    },
+    "after_check": {
+      "estimate": 1.2,
+      "truth": 1.482,
+      "ci": [
+        0.58,
+        1.81
+      ]
+    },
+    "flagged_pair_go_dark_true_iroas": {
+      "G28": 1.495
+    },
+    "brand_search_after_check": {
+      "estimate_pct": -5.28,
+      "ci_pct": [
+        -6.69,
+        -3.87
+      ],
+      "truth_pct": -3.99
+    }
+  }
+}

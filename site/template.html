@@ -1,0 +1,738 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PAWLY Incrementality Lab</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,0.10);
+  --est: #2a78d6; --est-band: rgba(42,120,214,0.16); --naive: #eb6834; --alt: #1baf7a;
+  --other: #b9b7ae; --shade: #efeee9; --shade-2: #fbe9df; --good: #006300; --bad: #d03b3b;
+  --font: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:where(:not([data-theme="light"])) {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10);
+  --est: #3987e5; --est-band: rgba(57,135,229,0.22); --naive: #d95926; --alt: #199e70;
+  --other: #5b5a55; --shade: #262624; --shade-2: #3a2a22; --good: #0ca30c; --bad: #e66767; } }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10);
+  --est: #3987e5; --est-band: rgba(57,135,229,0.22); --naive: #d95926; --alt: #199e70;
+  --other: #5b5a55; --shade: #262624; --shade-2: #3a2a22; --good: #0ca30c; --bad: #e66767; }
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 22px max(16px, env(safe-area-inset-left)) 56px; display: grid; gap: 18px; }
+h1, h2, h3 { margin: 0; line-height: 1.25; text-wrap: balance; }
+h1 { font-size: clamp(25px, 3.6vw, 32px); }
+h2 { font-size: 19px; }
+h3 { font-size: 15.5px; }
+p { margin: 0; }
+.eyebrow { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.lede { color: var(--ink-2); max-width: 70ch; margin-top: 6px; }
+.badge { display: inline-block; border: 1px solid var(--ring); border-radius: 999px; padding: 3px 10px; font-size: 12.5px; color: var(--ink-2); background: var(--surface); }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; border-block: 1px solid var(--grid); padding-block: 8px; }
+.tabs button { font: inherit; border: 0; background: none; color: var(--ink-2); padding: 6px 11px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--shade); color: var(--ink); }
+button:focus-visible { outline: 2px solid var(--est); outline-offset: 2px; }
+.view { display: grid; gap: 18px; }
+.view[hidden] { display: none; }
+.panel { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 18px; display: grid; gap: 12px; min-width: 0; }
+.two { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 900px) { .two { grid-template-columns: minmax(0, 1fr); } }
+.q { font-size: 17px; font-weight: 650; }
+.answer { border-left: 3px solid var(--est); padding: 2px 0 2px 12px; color: var(--ink); }
+.note { font-size: 13px; color: var(--ink-2); }
+.small { font-size: 12.5px; color: var(--muted); }
+.guide { border: 1px solid var(--ring); border-left: 3px solid var(--est); border-radius: 8px; background: var(--surface); padding: 9px 14px; font-size: 14px; }
+.guide summary { cursor: pointer; font-weight: 600; }
+.guide[open] summary { margin-bottom: 6px; }
+.guide ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.tile { border-left: 3px solid var(--grid); padding: 2px 0 2px 12px; display: grid; gap: 1px; }
+.tile.est { border-color: var(--est); } .tile.naive { border-color: var(--naive); } .tile.truth { border-color: var(--ink); }
+.tile .k { font-size: 12.5px; color: var(--ink-2); }
+.tile .v { font-size: 24px; font-weight: 700; }
+.tile .s { font-size: 12.5px; color: var(--muted); }
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+th { font-size: 11.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); font-weight: 600; white-space: nowrap; }
+td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+tr.hl td { background: var(--shade); }
+.ok { color: var(--good); font-weight: 600; white-space: nowrap; } .miss { color: var(--bad); font-weight: 600; white-space: nowrap; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--ink-2); align-items: center; }
+.sw { display: inline-block; width: 16px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+.sw.dot { width: 9px; height: 9px; border-radius: 50%; }
+.sw.box { height: 10px; border-radius: 2px; }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 3px; border: 1px solid var(--ring); border-radius: 8px; padding: 3px; background: var(--surface); }
+.seg button { font: inherit; font-size: 13px; border: 0; background: none; color: var(--ink-2); padding: 4px 10px; border-radius: 5px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.head { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; justify-content: space-between; }
+svg.chart { width: 100%; height: auto; display: block; overflow: visible; }
+svg.chart text { fill: var(--muted); font-family: var(--font); font-size: 11px; font-variant-numeric: tabular-nums; }
+svg.chart text.lab { fill: var(--ink-2); font-size: 11.5px; }
+svg.chart text.lab-strong { fill: var(--ink); font-size: 11.5px; font-weight: 600; }
+details.data { font-size: 13px; color: var(--ink-2); }
+details.data summary { cursor: pointer; }
+details.data table { margin-top: 6px; font-size: 12.5px; }
+.memo { max-width: 780px; display: grid; gap: 16px; }
+.memo > * { min-width: 0; }
+.memo dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 14px; margin: 0; font-size: 14px; border-block: 1px solid var(--grid); padding-block: 10px; }
+.memo dt { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); padding-top: 2px; }
+.memo dd { margin: 0; }
+.memo ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.log { display: grid; gap: 12px; }
+.log article { border-left: 3px solid var(--grid); padding-left: 12px; display: grid; gap: 4px; }
+.log h3 { font-size: 14.5px; }
+.log p { font-size: 14px; color: var(--ink-2); }
+footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--grid); padding-top: 12px; }
+#tip { position: fixed; pointer-events: none; z-index: 10; background: var(--surface); color: var(--ink); border: 1px solid var(--ring);
+  border-radius: 8px; padding: 7px 10px; font-size: 12.5px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); max-width: 260px; display: none; line-height: 1.4; }
+#tip b { font-weight: 650; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">PAWLY · fictional pet-food D2C brand · 40 Korean regions · 104 weeks of synthetic data</div>
+    <h1>PAWLY Incrementality Lab</h1>
+    <p class="lede">Five questions a small advertiser asks about its ads, each answered with the study that fits it:
+      a geo experiment designed for power, a causal-impact readout of a pause, a check of what AI auto-bidding really added,
+      and a media mix model calibrated with the experiments. Every number is graded against the hidden truth of the simulated world.</p>
+    <p style="margin-top:8px"><span class="badge">All data synthetic · no real brand, platform or customer</span></p>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Chapters">
+    <button role="tab" data-tab="start" aria-selected="true">Start here</button>
+    <button role="tab" data-tab="geo" aria-selected="false">1 · Geo test</button>
+    <button role="tab" data-tab="pause" aria-selected="false">2 · Pause</button>
+    <button role="tab" data-tab="auto" aria-selected="false">3 · Auto-bidding</button>
+    <button role="tab" data-tab="budget" aria-selected="false">4 · Budget</button>
+    <button role="tab" data-tab="readout" aria-selected="false">5 · Advertiser readout</button>
+    <button role="tab" data-tab="checks" aria-selected="false">How it was checked</button>
+  </nav>
+
+  <!-- ================= Start ================= -->
+  <section class="view" id="view-start" role="tabpanel">
+    <div class="panel">
+      <h2>Three things PAWLY's own reports got wrong</h2>
+      <div class="tiles" id="findings"></div>
+    </div>
+    <div class="panel">
+      <h2>Scorecard: the study's answer, the naive answer, and the truth</h2>
+      <p class="note">"Naive" is what the advertiser would conclude without the study: the platform's reported ROAS, a before/after
+        comparison, or reported revenue. Intervals are 95% (chapters 1-3) and 90% (chapter 4).</p>
+      <div class="tbl"><table id="scorecard"></table></div>
+    </div>
+    <div class="panel">
+      <h2>One channel, six reads: what to tell the advertiser about short video</h2>
+      <p class="note" id="tri-note"></p>
+      <div class="tbl"><table id="tri"></table></div>
+    </div>
+    <div class="panel">
+      <h2>Chapter 0 · Pick the study from the question</h2>
+      <p class="note">A decision table an account team can use before promising a study. Eligibility numbers come from PAWLY's own history.</p>
+      <div class="tbl"><table id="playbook"></table></div>
+    </div>
+  </section>
+
+  <!-- ================= Geo test ================= -->
+  <section class="view" id="view-geo" role="tabpanel" hidden>
+    <details class="guide"><summary>How to read this tab</summary><ul>
+      <li><b>Design (left):</b> before launching, past weeks are replayed as fake tests. Each line shows how often a test of that length catches a true revenue drop of the size on the x-axis. Where a line crosses 80% is its minimum detectable effect.</li>
+      <li><b>Eligibility table:</b> turns that effect into money. "Min. detectable iROAS" is the smallest return per won the test can tell apart from zero at the planned budget.</li>
+      <li><b>Readout (below):</b> each dot is a region pair; the shaded band is normal pair-to-pair noise. A dot outside it is checked with the advertiser before anything is dropped.</li>
+    </ul></details>
+    <div class="panel">
+      <p class="q" id="geo-q"></p>
+      <p class="answer" id="geo-answer"></p>
+    </div>
+    <div class="two">
+      <div class="panel">
+        <div class="head"><div><h3>Power by test length</h3><p class="small">Share of replayed past windows where the 95% interval sits below zero</p></div>
+          <div class="legend"><span><span class="sw" style="background:var(--est)"></span>6 weeks (chosen)</span>
+            <span><span class="sw" style="background:var(--other)"></span>2, 4, 8 weeks</span></div></div>
+        <svg class="chart" id="power" viewBox="0 0 560 300" role="img" aria-label="Power curves by test length"></svg>
+        <details class="data"><summary>Data table</summary><div class="tbl" id="power-table"></div></details>
+      </div>
+      <div class="panel">
+        <h3>Eligibility: what each length can detect</h3>
+        <div class="tbl"><table id="elig"></table></div>
+        <p class="note" id="aa-note"></p>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Design options the advertiser may ask for</h3>
+      <p class="small">Same history, same A/A calibration. "Min. detectable return" = the smallest return per won each design can tell apart from zero with 80% power.</p>
+      <div class="tbl"><table id="options"></table></div>
+      <p class="note" id="options-note"></p>
+    </div>
+    <div class="two">
+      <div class="panel">
+        <div class="head"><div><h3>Pair diagnostic</h3><p class="small">Change in go-dark / control revenue ratio, test vs pre-period, in robust z-units</p></div></div>
+        <svg class="chart" id="pairs" viewBox="0 0 560 280" role="img" aria-label="Pair diagnostic"></svg>
+        <details class="data"><summary>Data table</summary><div class="tbl" id="pairs-table"></div></details>
+      </div>
+      <div class="panel">
+        <h3>Readout</h3>
+        <div class="tiles" id="geo-tiles"></div>
+        <p class="note" id="geo-flag"></p>
+        <h3 style="margin-top:6px">Is dropping the pair the right call? 60 luck draws</h3>
+        <div class="tbl"><table id="mc"></table></div>
+        <p class="note" id="mc-note"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Pause ================= -->
+  <section class="view" id="view-pause" role="tabpanel" hidden>
+    <details class="guide"><summary>How to read this tab</summary><ul>
+      <li>Black line: actual daily revenue, all regions. Blue line and band: what revenue would have been without the pause (median and 95% range), learned from the weeks before.</li>
+      <li>The model leans on pet-food category searches, which follow the season but not PAWLY's ads. That is how it tells the summer dip apart from the pause.</li>
+      <li>Grey weeks are masked: during the geo test half the regions had no video, so the model must not learn from them.</li>
+    </ul></details>
+    <div class="panel"><p class="q" id="pause-q"></p><p class="answer" id="pause-answer"></p></div>
+    <div class="panel">
+      <div class="head">
+        <div><h3>Daily revenue vs counterfactual</h3><p class="small">KRW million per day, all regions</p></div>
+        <div class="legend"><span><span class="sw" style="background:var(--ink)"></span>Actual</span>
+          <span><span class="sw" style="background:var(--est)"></span>Counterfactual (median)</span>
+          <span><span class="sw box" style="background:var(--est-band)"></span>95% range</span></div>
+      </div>
+      <svg class="chart" id="ci-chart" viewBox="0 0 760 300" role="img" aria-label="Actual revenue against the counterfactual"></svg>
+      <details class="data"><summary>Data table (pause weeks)</summary><div class="tbl" id="ci-table"></div></details>
+    </div>
+    <div class="two">
+      <div class="panel"><h3>Three answers to the same question</h3><div class="tiles" id="pause-tiles"></div></div>
+      <div class="panel"><h3>Placebo checks: quiet past windows</h3><div class="tbl"><table id="placebo"></table></div>
+        <p class="note">A model that finds effects where nothing happened cannot be trusted where something did. Both ranges contain zero.</p></div>
+    </div>
+  </section>
+
+  <!-- ================= Auto-bidding ================= -->
+  <section class="view" id="view-auto" role="tabpanel" hidden>
+    <details class="guide"><summary>How to read this tab</summary><ul>
+      <li>Both lines are indexed to 100 over the four weeks before the switch, so they share one axis.</li>
+      <li>Orange: search revenue as the ad platform reports it. Black: total revenue from PAWLY's own order system.</li>
+      <li>Histogram: the same jump measurement at 456 past dates when nothing changed. If the measured jump sits in the middle, it is ordinary noise.</li>
+    </ul></details>
+    <div class="panel"><p class="q" id="auto-q"></p><p class="answer" id="auto-answer"></p></div>
+    <div class="two">
+      <div class="panel">
+        <div class="head"><div><h3>Reported search revenue vs total revenue</h3><p class="small">Index, 4 weeks before the switch = 100 (7-day average)</p></div>
+          <div class="legend"><span><span class="sw" style="background:var(--naive)"></span>Reported search revenue</span>
+            <span><span class="sw" style="background:var(--ink)"></span>Total revenue</span></div></div>
+        <svg class="chart" id="auto-chart" viewBox="0 0 560 300" role="img" aria-label="Indexed reported search revenue and total revenue"></svg>
+      </div>
+      <div class="panel">
+        <div class="head"><div><h3>Is the jump unusual?</h3><p class="small">Jumps in total revenue at 456 quiet past dates, %</p></div></div>
+        <svg class="chart" id="placebo-hist" viewBox="0 0 560 300" role="img" aria-label="Distribution of placebo jumps"></svg>
+      </div>
+    </div>
+    <div class="two">
+      <div class="panel"><h3>Where the reported increase came from (4 weeks)</h3><div class="tiles" id="auto-tiles"></div></div>
+      <div class="panel"><h3>The budget increase that followed</h3><div class="tiles" id="up-tiles"></div><p class="note" id="up-note"></p></div>
+    </div>
+  </section>
+
+  <!-- ================= Budget ================= -->
+  <section class="view" id="view-budget" role="tabpanel" hidden>
+    <details class="guide"><summary>How to read this tab</summary><ul>
+      <li><b>ROI chart:</b> each channel's average return per won. Grey: the model built before any experiment. Blue: the same model calibrated with the two experiments. Black tick: the truth. Orange ring: what the ad platforms report.</li>
+      <li><b>Response curve:</b> extra revenue next year if one channel's budget is scaled (x = 1 is today's budget), others unchanged. Blue band: calibrated model, 90%. Black: the truth.</li>
+      <li><b>Plans:</b> each model proposes a reallocation (same total). Every plan is then run through the true world.</li>
+    </ul></details>
+    <div class="panel"><p class="q" id="budget-q"></p><p class="answer" id="budget-answer"></p></div>
+    <div class="panel">
+      <div class="head"><div><h3>Cross-platform view: what each platform claims vs what it adds</h3>
+        <p class="small">Weeks 1-78. Claimed = the platform's own reported revenue. Added = incremental revenue from the calibrated model (90%).</p></div></div>
+      <div class="tiles" id="xp-tiles"></div>
+      <div class="tbl"><table id="xp-table"></table></div>
+      <p class="note" id="xp-note"></p>
+    </div>
+    <div class="two">
+      <div class="panel">
+        <div class="head"><div><h3>Channel ROI against the truth</h3><p class="small">Weeks 1-78, 90% intervals</p></div></div>
+        <div class="legend"><span><span class="sw" style="background:var(--other)"></span>Before tests</span>
+          <span><span class="sw" style="background:var(--est)"></span>After tests (calibrated)</span>
+          <span><span class="sw" style="background:var(--ink);width:3px;height:12px"></span>Truth</span>
+          <span><span class="sw dot" style="border:2px solid var(--naive);background:transparent"></span>Platform-reported</span></div>
+        <svg class="chart" id="roi" viewBox="0 0 560 300" role="img" aria-label="Channel ROI"></svg>
+        <details class="data"><summary>Data table</summary><div class="tbl" id="roi-table"></div></details>
+      </div>
+      <div class="panel">
+        <div class="head"><div><h3>Response curve</h3><p class="small">Extra revenue next year, KRW million</p></div><div class="seg" id="curve-seg"></div></div>
+        <div class="legend"><span><span class="sw" style="background:var(--est)"></span>Calibrated model (median)</span>
+          <span><span class="sw box" style="background:var(--est-band)"></span>90% range</span>
+          <span><span class="sw" style="background:var(--ink)"></span>Truth</span></div>
+        <svg class="chart" id="curve" viewBox="0 0 560 300" role="img" aria-label="Response curve"></svg>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Marginal ROI at today's budget: where the next won earns most</h3>
+      <p class="small">Extra revenue per extra won if one channel's budget moves ±10% next year. Above 1 = room to grow; below 1 = trim first.</p>
+      <div class="tbl"><table id="mroi"></table></div>
+      <p class="note" id="mroi-note"></p>
+    </div>
+    <div class="panel">
+      <h3>Budget plans, run through the true world</h3>
+      <div class="tbl"><table id="plans"></table></div>
+      <p class="note" id="plans-note"></p>
+    </div>
+  </section>
+
+  <!-- ================= Readout ================= -->
+  <section class="view" id="view-readout" role="tabpanel" hidden>
+    <article class="panel memo" id="memo"></article>
+    <aside class="panel memo" id="ae-notes" aria-label="Internal notes for the account team"></aside>
+  </section>
+
+  <!-- ================= Checks ================= -->
+  <section class="view" id="view-checks" role="tabpanel" hidden>
+    <div class="panel"><h2>Checks that every number passed</h2><div class="tiles" id="check-tiles"></div></div>
+    <div class="panel"><h2>Known limits</h2>
+      <ul class="note" style="margin:0;padding-left:20px;display:grid;gap:6px">
+        <li><b>One simulated world.</b> The geo test was re-run on 60 noise draws; the other chapters were checked with placebo windows, not repeated worlds.</li>
+        <li><b>The control series is cleaner than real ones.</b> The category-search index that drives the causal-impact model follows true demand with 5% noise. Real covariates (search trends, competitor sales) are noisier and can be touched by the campaign, which widens intervals and can bias them.</li>
+        <li><b>TBR with A/A calibration instead of Trimmed Match.</b> TBR reads the go-dark test from group totals, as in GeoX; its interval was fixed with historical A/A tests. Trimmed Match, the pair-level estimator that trims outlier pairs automatically, would be the more robust choice when pairs differ a lot; here the pair diagnostic and an advertiser check do that trimming by hand.</li>
+        <li><b>No user-level paths.</b> The cross-platform view uses each platform's self-reported revenue; GA4-style data-driven attribution paths are not simulated.</li>
+        <li><b>The world is mine.</b> The methods were tested against problems I chose; the log below records where they failed a check, including results that came out differently from the plan.</li>
+      </ul></div>
+    <div class="panel"><h2>Problems the checks caught, and the fixes</h2>
+      <p class="note">Built with Claude Code. Each entry is a check that failed, why, and what changed. Full log: docs/ai_workflow_log.md.</p>
+      <div class="log" id="log"></div></div>
+  </section>
+
+  <footer>PAWLY is fictional; all data is simulated from a known process so every method can be graded. Methods: time-based regression with A/A calibration, Bayesian structural time series (PyMC), regression discontinuity in time with placebo dates, Bayesian media mix model with experiment calibration.</footer>
+</div>
+<div id="tip" role="status"></div>
+<script id="data" type="application/json">/*__DATA__*/</script>
+<script>
+const D = JSON.parse(document.getElementById("data").textContent);
+const NS = "http://www.w3.org/2000/svg";
+const $ = (id) => document.getElementById(id);
+const fmt = (v, d = 1) => (v == null ? "–" : Number(v).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d }));
+const krw = (v) => `KRW ${fmt(v, 1)}M`;
+const range = (a, d = 2) => `${fmt(a[0], d)} to ${fmt(a[1], d)}`;
+const CH = { search: "Search", short_video: "Short video", social: "Social", retargeting: "Retargeting" };
+
+// ------------------------------------------------------------ helpers
+function el(tag, attrs = {}, parent, text) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (text != null) e.textContent = text;
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function lin(d0, d1, r0, r1) { const f = (v) => r0 + ((v - d0) / (d1 - d0)) * (r1 - r0); f.inv = (p) => d0 + ((p - r0) / (r1 - r0)) * (d1 - d0); return f; }
+function niceTicks(min, max, n = 6) {
+  const span = max - min, raw = span / n, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => span / s <= n) || 10 * mag;
+  const out = []; for (let v = Math.ceil(min / step) * step; v <= max + 1e-9; v += step) out.push(+v.toFixed(10));
+  return out;
+}
+function frame(svg, { xd, yd, m = { l: 52, r: 18, t: 14, b: 34 }, xt, yt, xfmt = (v) => v, yfmt = (v) => v, xlab, ylab }) {
+  const vb = svg.viewBox.baseVal, W = vb.width, H = vb.height;
+  const x = lin(xd[0], xd[1], m.l, W - m.r), y = lin(yd[0], yd[1], H - m.b, m.t);
+  const g = el("g", {}, svg);
+  for (const t of yt || niceTicks(yd[0], yd[1])) {
+    el("line", { x1: m.l, x2: W - m.r, y1: y(t), y2: y(t), stroke: "var(--grid)", "stroke-width": 1 }, g);
+    el("text", { x: m.l - 8, y: y(t) + 4, "text-anchor": "end" }, g, yfmt(t));
+  }
+  el("line", { x1: m.l, x2: W - m.r, y1: H - m.b, y2: H - m.b, stroke: "var(--axis)", "stroke-width": 1 }, g);
+  for (const t of xt || niceTicks(xd[0], xd[1])) el("text", { x: x(t), y: H - m.b + 18, "text-anchor": "middle" }, g, xfmt(t));
+  if (xlab) el("text", { x: W - m.r, y: H - 2, "text-anchor": "end" }, g, xlab);
+  if (ylab) el("text", { x: m.l, y: m.t - 4, "text-anchor": "start" }, g, ylab);
+  return { x, y, W, H, m };
+}
+function path(xs, ys, x, y) { return xs.map((v, i) => `${i ? "L" : "M"}${x(v).toFixed(1)},${y(ys[i]).toFixed(1)}`).join(""); }
+function band(xs, lo, hi, x, y) {
+  return path(xs, hi, x, y) + xs.slice().reverse().map((v, i) => `L${x(v).toFixed(1)},${y(lo[xs.length - 1 - i]).toFixed(1)}`).join("") + "Z";
+}
+const tip = $("tip");
+function showTip(html, ev) {
+  tip.innerHTML = html; tip.style.display = "block";
+  const r = tip.getBoundingClientRect();
+  let left = ev.clientX + 14, top = ev.clientY + 14;
+  if (left + r.width > innerWidth - 8) left = ev.clientX - r.width - 14;
+  if (top + r.height > innerHeight - 8) top = ev.clientY - r.height - 14;
+  tip.style.left = left + "px"; tip.style.top = top + "px";
+}
+function hideTip() { tip.style.display = "none"; }
+function hover(node, html) {
+  node.style.cursor = "default";
+  node.addEventListener("pointermove", (e) => showTip(html, e));
+  node.addEventListener("pointerleave", hideTip);
+}
+function crosshair(svg, fr, xs, render) {
+  const g = el("g", {}, svg);
+  const line = el("line", { y1: fr.m.t, y2: fr.H - fr.m.b, stroke: "var(--axis)", "stroke-width": 1, visibility: "hidden" }, g);
+  const rect = el("rect", { x: fr.m.l, y: fr.m.t, width: fr.W - fr.m.l - fr.m.r, height: fr.H - fr.m.t - fr.m.b, fill: "transparent" }, svg);
+  rect.addEventListener("pointermove", (e) => {
+    const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+    const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+    const v = fr.x.inv(p.x);
+    let i = 0, best = Infinity;
+    xs.forEach((xv, k) => { const dd = Math.abs(xv - v); if (dd < best) { best = dd; i = k; } });
+    line.setAttribute("x1", fr.x(xs[i])); line.setAttribute("x2", fr.x(xs[i])); line.setAttribute("visibility", "visible");
+    showTip(render(i), e);
+  });
+  rect.addEventListener("pointerleave", () => { line.setAttribute("visibility", "hidden"); hideTip(); });
+}
+function table(target, headers, rows, numeric = []) {
+  const t = typeof target === "string" ? $(target) : target;
+  const isTable = t.tagName === "TABLE";
+  const tbl = isTable ? t : document.createElement("table");
+  tbl.innerHTML = "<thead><tr>" + headers.map((h) => `<th>${h}</th>`).join("") + "</tr></thead><tbody>" +
+    rows.map((r) => `<tr${r.hl ? ' class="hl"' : ""}>` + (r.cells || r).map((c, i) => `<td${numeric.includes(i) ? ' class="n"' : ""}>${c}</td>`).join("") + "</tr>").join("") + "</tbody>";
+  if (!isTable) { t.innerHTML = ""; t.appendChild(tbl); }
+}
+function tiles(target, items) {
+  $(target).innerHTML = items.map((it) => `<div class="tile ${it.cls || ""}"><span class="k">${it.k}</span><span class="v">${it.v}</span>${it.s ? `<span class="s">${it.s}</span>` : ""}</div>`).join("");
+}
+const inside = (ok) => (ok ? '<span class="ok">✓ inside</span>' : '<span class="miss">✕ outside</span>');
+
+// ------------------------------------------------------------ tabs
+document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => {
+  document.querySelectorAll(".tabs button").forEach((x) => x.setAttribute("aria-selected", x === b));
+  document.querySelectorAll(".view").forEach((v) => (v.hidden = v.id !== "view-" + b.dataset.tab));
+  try { localStorage.setItem("pawly-tab", b.dataset.tab); } catch (e) {}
+}));
+try { const saved = localStorage.getItem("pawly-tab"); if (saved) document.querySelector(`.tabs button[data-tab="${saved}"]`)?.click(); } catch (e) {}
+
+// ------------------------------------------------------------ start
+(function start() {
+  const V = D.validation, r1 = D.ch1_readout.after_check.revenue, c3 = D.ch3, xp = D.cross.totals;
+  tiles("findings", [
+    { cls: "naive", k: "Short video looked like a loser", v: `0.30 → ${fmt(r1.iroas, 2)}`,
+      s: `Platform-reported ROAS vs the geo test's incremental return (truth ${fmt(D.ch1_readout.validation_against_truth.after_check.truth, 2)}). Video pays back.` },
+    { cls: "naive", k: "Auto-bidding's +93% added no sales", v: `${fmt(c3.total_sales_rdit.jump_pct, 1)}%`,
+      s: `Change in total sales at the switch (truth ${fmt(c3.validation_against_truth.true_effect_pct, 2)}%). The reported jump was re-credited sales.` },
+    { cls: "naive", k: "Platforms claim more than ads add", v: `${fmt(xp.claimed_vs_added, 1)}×`,
+      s: `Revenue all platforms report vs revenue ads actually added (truth ${fmt(xp.true_claimed_vs_added, 1)}×).` },
+  ]);
+  table("scorecard", ["Ch.", "Question", "Naive answer", "This study", "Interval", "Truth", ""],
+    V.rows.map((r) => { const d = Math.abs(r.truth) >= 10 ? 1 : 2;
+      return [r.chapter, r.quantity, r.naive, fmt(r.estimate, d), range(r.interval, d), fmt(r.truth, d), inside(r.truth_inside)]; }), [0, 3, 5]);
+  const T = V.video_triangulation;
+  $("tri-note").textContent = T.message;
+  table("tri", ["Source", "Weeks", "Return per won", "Interval", "Truth, same weeks", "Why it differs"],
+    T.rows.map((r, i) => ({ hl: i === 1 || i === 2, cells: [r.source, r.weeks, fmt(r.estimate, 2), r.interval ? range(r.interval) : "–",
+      r.truth == null ? "–" : fmt(r.truth, 2), r.why] })), [2, 4]);
+  table("playbook", ["Question", "Study", "Use when", "Eligibility", "Watch out for"],
+    D.playbook.rows.map((r) => [`<b>${r.question}</b>`, `${r.method}<br><span class="small">Chapter ${r.chapter}</span>`, r.use_when, r.eligibility, r.watch_out]));
+})();
+
+// ------------------------------------------------------------ geo
+(function geo() {
+  const des = D.ch1_design, rd = D.ch1_readout, mc = D.ch1_montecarlo;
+  const a = rd.after_check.revenue, v = rd.validation_against_truth;
+  $("geo-q").textContent = "Does short-form video drive incremental revenue for PAWLY?";
+  $("geo-answer").innerHTML = `Yes. Switching video off in 20 matched regions for 6 weeks cost ${krw(-a.effect_krw_m)} of sales (${fmt(a.effect_pct, 1)}%),
+    an incremental return of <b>${fmt(a.iroas, 2)}</b> per won (95%: ${range(a.iroas_ci)}). The platform reports 0.30. True value for these regions: ${fmt(v.after_check.truth, 2)}.`;
+
+  // power curves
+  const svg = $("power"), xs = des.power_curves.deltas_pct, P = des.power_curves.revenue;
+  const fr = frame(svg, { xd: [0, 8], yd: [0, 1], yt: [0, 0.2, 0.4, 0.6, 0.8, 1], yfmt: (t) => `${t * 100}%`, xfmt: (t) => `${t}%`, xlab: "true revenue drop in go-dark regions" });
+  el("line", { x1: fr.m.l, x2: fr.W - fr.m.r, y1: fr.y(0.8), y2: fr.y(0.8), stroke: "var(--ink-2)", "stroke-width": 1 }, svg);
+  el("text", { x: fr.m.l + 4, y: fr.y(0.8) - 5, class: "lab" }, svg, "80% power");
+  const weeks = ["2", "4", "8", "6"];
+  for (const w of weeks) {
+    const main = w === "6";
+    el("path", { d: path(xs, P[w], fr.x, fr.y), fill: "none", stroke: main ? "var(--est)" : "var(--other)", "stroke-width": main ? 2.5 : 1.5 }, svg);
+  }
+  // direct labels at each line's MDE
+  for (const e of des.eligibility) {
+    if (e.mde_revenue_pct == null) continue;
+    const main = e.weeks === 6;
+    el("circle", { cx: fr.x(e.mde_revenue_pct), cy: fr.y(0.8), r: main ? 4.5 : 3, fill: main ? "var(--est)" : "var(--other)", stroke: "var(--surface)", "stroke-width": 2 }, svg);
+  }
+  const six6 = des.eligibility.find((e) => e.weeks === 6);
+  el("text", { x: fr.x(six6.mde_revenue_pct) + 8, y: fr.y(0.8) + 16, class: "lab-strong" }, svg, `6 weeks: MDE ${fmt(six6.mde_revenue_pct, 1)}%`);
+  crosshair(svg, fr, xs, (i) => `<b>True drop ${fmt(xs[i], 1)}%</b><br>` + ["2", "4", "6", "8"].map((w) => `${w} weeks: ${Math.round(P[w][i] * 100)}%`).join("<br>"));
+  table("power-table", ["Drop", "2 wk", "4 wk", "6 wk", "8 wk"],
+    xs.filter((_, i) => i % 5 === 0).map((x0) => { const i = xs.indexOf(x0); return [`${fmt(x0, 1)}%`, ...["2", "4", "6", "8"].map((w) => `${Math.round(P[w][i] * 100)}%`)]; }), [1, 2, 3, 4]);
+
+  table("elig", ["Length", "MDE revenue", "MDE KRW", "Min. detectable iROAS", "Brand-search MDE", "Revenue at risk*"],
+    des.eligibility.map((e) => ({ hl: e.weeks === 6, cells: [`${e.weeks} weeks`, `${fmt(e.mde_revenue_pct, 1)}%`, `${fmt(e.mde_revenue_krw_m, 1)}M`, fmt(e.min_detectable_iroas, 2), `${fmt(e.mde_brand_search_pct, 1)}%`, `${fmt(e.revenue_at_risk_krw_m[0], 0)}-${fmt(e.revenue_at_risk_krw_m[1], 0)}M`] })), [1, 2, 3, 4, 5]);
+  const six = des.eligibility.find((e) => e.weeks === 6);
+  $("aa-note").innerHTML = `*If the true iROAS is 0.5-2.0. A/A tests (past windows with nothing injected): the standard interval cried wolf in
+    ${fmt(six.aa_false_positive_uncalibrated * 100, 0)}% of 6-week windows; after calibration, ${fmt(six.aa_false_positive_holdout * 100, 1)}% on held-out windows (target 5%).
+    Eligibility rule: at least KRW ${fmt(six.min_national_video_budget_for_iroas1_m_per_day, 2)}M/day of national video for 6 weeks.`;
+
+  // design options
+  const opts = des.design_options;
+  table("options", ["Design", "Reads", "Weeks", "Video in test regions", "MDE", "Min. detectable return", "Spend moved", "Sales at risk*"],
+    opts.map((o, i) => ({ hl: i === 0, cells: [o.design, o.measures, o.weeks, `${o.treated_share_of_video_pct}%`, `${fmt(o.mde_revenue_pct, 1)}%`,
+      fmt(o.min_detectable_return, 2), `${fmt(o.spend_moved_krw_m, 0)}M ${o.revenue_at_risk_krw_m ? "withheld" : "added"}`,
+      o.revenue_at_risk_krw_m ? `${fmt(o.revenue_at_risk_krw_m[0], 0)}-${fmt(o.revenue_at_risk_krw_m[1], 0)}M` : "none"] })), [2, 4, 5]);
+  const o30 = opts.find((o) => o.design.startsWith("Go-dark, 30%") && o.weeks === 6), hu = opts.find((o) => o.design.startsWith("Heavy-up"));
+  $("options-note").textContent = `*If the true return is 0.5-2.0. A 30% go-dark share reads almost as finely (${fmt(o30.min_detectable_return, 2)} vs ${fmt(opts[0].min_detectable_return, 2)}) with about ${Math.round(100 * o30.spend_moved_krw_m / opts[0].spend_moved_krw_m)}% of the sales at risk, an easier ask for the advertiser; in hindsight it was the better recommendation, and the next test uses it. A heavy-up never switches video off but reads the marginal return, and it can only detect ${fmt(hu.min_detectable_return, 2)} or more; with marginal returns below 1 (chapter 4) it would come back "no effect".`;
+
+  // pair diagnostic
+  const pd = rd.pair_diagnostics, ps = $("pairs");
+  const z = pd.robust_z, zmin = Math.min(-4, ...z) - 0.3, zmax = Math.max(4, ...z) + 0.3;
+  const fp = frame(ps, { xd: [0.5, 20.5], yd: [zmin, zmax], xt: [1, 5, 10, 15, 20], xlab: "pair (largest regions first)" });
+  el("rect", { x: fp.m.l, width: fp.W - fp.m.l - fp.m.r, y: fp.y(3), height: fp.y(-3) - fp.y(3), fill: "var(--shade)" }, ps);
+  el("text", { x: fp.W - fp.m.r - 4, y: fp.y(3) + 13, "text-anchor": "end", class: "lab" }, ps, "normal noise (|z| ≤ 3)");
+  el("line", { x1: fp.m.l, x2: fp.W - fp.m.r, y1: fp.y(0), y2: fp.y(0), stroke: "var(--axis)" }, ps);
+  const flagged = new Set(pd.flagged.map((f) => f.pair));
+  pd.pairs.forEach((p, i) => {
+    const f = flagged.has(p);
+    const c = el("circle", { cx: fp.x(p), cy: fp.y(z[i]), r: f ? 6 : 4.5, fill: f ? "var(--naive)" : "var(--est)", stroke: "var(--surface)", "stroke-width": 2 }, ps);
+    const hit = el("circle", { cx: fp.x(p), cy: fp.y(z[i]), r: 12, fill: "transparent" }, ps);
+    hover(hit, `<b>Pair ${p}</b><br>robust z ${fmt(z[i], 2)}<br>ratio change ${fmt(pd.log_ratio_change[i] * 100, 1)}%`);
+  });
+  for (const f of pd.flagged) {
+    const i = pd.pairs.indexOf(f.pair);
+    el("text", { x: fp.x(f.pair) + 10, y: fp.y(z[i]) + 4, class: "lab-strong" }, ps, `Pair ${f.pair}: control ${f.control} +${fmt(f.control_vs_other_controls_pct, 0)}%`);
+  }
+  table("pairs-table", ["Pair", "Robust z", "Ratio change"], pd.pairs.map((p, i) => [p, fmt(z[i], 2), `${fmt(pd.log_ratio_change[i] * 100, 1)}%`]), [0, 1, 2]);
+
+  const all = rd.all_pairs.revenue;
+  tiles("geo-tiles", [
+    { cls: "est", k: "iROAS after the check (19 pairs)", v: fmt(a.iroas, 2), s: `95%: ${range(a.iroas_ci)}` },
+    { cls: "", k: "iROAS with all 20 pairs", v: fmt(all.iroas, 2), s: `95%: ${range(all.iroas_ci)}` },
+    { cls: "truth", k: "True iROAS, the 19 pairs", v: fmt(v.after_check.truth, 2), s: "from the simulated world" },
+    { cls: "est", k: "Brand searches, go-dark regions", v: `${fmt(rd.after_check.brand_search.effect_pct, 1)}%`, s: `truth ${fmt(v.brand_search_after_check.truth_pct, 1)}%` },
+    { cls: "est", k: "iROAS incl. 2-week cooldown", v: fmt(rd.with_cooldown.revenue.iroas, 2), s: `95%: ${range(rd.with_cooldown.revenue.iroas_ci)} · truth ${fmt(rd.with_cooldown.truth_iroas, 2)}` },
+  ]);
+  const f0 = pd.flagged[0];
+  $("geo-flag").innerHTML = f0 ? `Pair ${f0.pair} stood out (z = ${fmt(f0.robust_z, 1)}): control region ${f0.control} ran ${fmt(f0.control_vs_other_controls_pct, 0)}% above the other controls.
+    The advertiser confirmed a retail partner's promotion there in weeks 80-83, so the pair was excluded. With it, the all-pair estimate happens to land on the truth; the next table shows that was luck.` : "";
+  table("mc", ["Readout", "Average bias", "Error (RMSE)", "95% interval covers truth"], [
+    ["All 20 pairs (promotion included)", `+${fmt(mc.all_pairs.mean_bias_iroas, 2)}`, fmt(mc.all_pairs.rmse_iroas, 2), `${fmt(mc.all_pairs.ci_coverage * 100, 0)}%`],
+    { hl: true, cells: ["Without the contaminated pair", `+${fmt(mc.without_contaminated_pair.mean_bias_iroas, 2)}`, fmt(mc.without_contaminated_pair.rmse_iroas, 2), `${fmt(mc.without_contaminated_pair.ci_coverage * 100, 0)}%`] },
+    ["Same, test + 2-week cooldown (vs the fuller effect)", `+${fmt(mc.with_cooldown.mean_bias_iroas, 2)}`, fmt(mc.with_cooldown.rmse_iroas, 2), `${fmt(mc.with_cooldown.ci_coverage * 100, 0)}%`],
+  ], [1, 2, 3]);
+  $("mc-note").textContent = `Same regions, design and promotion on ${mc.draws} fresh noise draws. The diagnostic flags the promotion pair in ${fmt(mc.diagnostic_flags_promo_pair * 100, 0)}% of draws, and a clean pair in ${fmt(mc.draws_with_any_false_flag * 100, 0)}%: confirm with the advertiser, then drop. `
+    + `Part of video's effect lands after the test (${fmt(rd.with_cooldown.share_of_loss_after_test_pct, 0)}% in this draw), so the 6-week read understates the fuller effect by ${fmt(-mc.with_cooldown.test_only_bias_vs_full_effect, 2)} on average; the 8-week read gets closer but is noisier. Both are reported.`;
+})();
+
+// ------------------------------------------------------------ pause
+(function pause() {
+  const c = D.ch2, ci = c.causal_impact, v = c.validation_against_truth, s = c.series;
+  $("pause-q").textContent = c.question;
+  $("pause-answer").innerHTML = `About ${krw(-ci.effect_krw_m)} of sales (95%: ${krw(-ci.ci_krw_m[1])} to ${krw(-ci.ci_krw_m[0])}), an iROAS of <b>${fmt(ci.iroas, 2)}</b> on the cancelled budget.
+    A before/after comparison says ${krw(-c.naive_before_after.effect_krw_m)}, because the pause fell in the summer dip. Truth: ${krw(-v.true_effect_krw_m)}.`;
+  const svg = $("ci-chart"), n = s.date.length, xs = [...Array(n).keys()];
+  const div = (a) => a.map((x) => x / 1e6);
+  const act = div(s.actual), med = div(s.cf_median), lo = div(s.cf_low), hi = div(s.cf_high);
+  const ymin = Math.min(...act, ...lo) * 0.95, ymax = Math.max(...act, ...hi) * 1.03;
+  const monthTicks = xs.filter((i) => s.date[i].endsWith("-01"));
+  const fr = frame(svg, { xd: [0, n - 1], yd: [ymin, ymax], xt: monthTicks, xfmt: (i) => new Date(s.date[i]).toLocaleString("en-US", { month: "short" }), m: { l: 52, r: 18, t: 24, b: 30 } });
+  const spans = (flag) => { const out = []; let st = null; flag.forEach((f, i) => { if (f && st == null) st = i; if ((!f || i === n - 1) && st != null) { out.push([st, f ? i : i - 1]); st = null; } }); return out; };
+  const masked = s.observed.map((o, i) => !o && !s.post[i]);
+  for (const [a0, a1] of spans(masked)) {
+    el("rect", { x: fr.x(a0), width: fr.x(a1) - fr.x(a0), y: fr.m.t, height: fr.H - fr.m.t - fr.m.b, fill: "var(--shade)" }, svg);
+    el("text", { x: (fr.x(a0) + fr.x(a1)) / 2, y: fr.m.t - 8, "text-anchor": "middle", class: "lab" }, svg, "masked: geo test");
+  }
+  for (const [a0, a1] of spans(s.post)) {
+    el("rect", { x: fr.x(a0), width: fr.x(a1) - fr.x(a0), y: fr.m.t, height: fr.H - fr.m.t - fr.m.b, fill: "var(--shade-2)" }, svg);
+    el("text", { x: (fr.x(a0) + fr.x(a1)) / 2, y: fr.m.t - 8, "text-anchor": "middle", class: "lab-strong" }, svg, "video paused");
+  }
+  el("path", { d: band(xs, lo, hi, fr.x, fr.y), fill: "var(--est-band)" }, svg);
+  el("path", { d: path(xs, med, fr.x, fr.y), fill: "none", stroke: "var(--est)", "stroke-width": 2 }, svg);
+  el("path", { d: path(xs, act, fr.x, fr.y), fill: "none", stroke: "var(--ink)", "stroke-width": 1.5 }, svg);
+  crosshair(svg, fr, xs, (i) => `<b>${s.date[i]}</b><br>Actual ${fmt(act[i], 1)}M<br>Counterfactual ${fmt(med[i], 1)}M (${fmt(lo[i], 1)}-${fmt(hi[i], 1)})`);
+  table("ci-table", ["Date", "Actual (M)", "Counterfactual (M)", "95% range"],
+    xs.filter((i) => s.post[i]).map((i) => [s.date[i], fmt(act[i], 1), fmt(med[i], 1), `${fmt(lo[i], 1)}-${fmt(hi[i], 1)}`]), [1, 2]);
+  tiles("pause-tiles", [
+    { cls: "naive", k: "Before/after comparison", v: krw(c.naive_before_after.effect_krw_m), s: `iROAS ${fmt(c.naive_before_after.iroas, 2)}` },
+    { cls: "est", k: "Causal impact", v: krw(ci.effect_krw_m), s: `95%: ${fmt(ci.ci_krw_m[0], 0)} to ${fmt(ci.ci_krw_m[1], 0)}M · iROAS ${fmt(ci.iroas, 2)}` },
+    { cls: "truth", k: "Truth", v: krw(v.true_effect_krw_m), s: `iROAS ${fmt(v.true_iroas, 2)}` },
+  ]);
+  table("placebo", ["Fake pause (weeks)", "Effect found", "95% range", "Contains zero"],
+    c.placebo_checks.map((p) => [`${p.post_weeks[0]}-${p.post_weeks[1]}`, krw(p.effect_krw_m), `${fmt(p.ci_krw_m[0], 0)} to ${fmt(p.ci_krw_m[1], 0)}M`, p.contains_zero ? '<span class="ok">✓ yes</span>' : '<span class="miss">✕ no</span>']), [1]);
+})();
+
+// ------------------------------------------------------------ auto-bidding
+(function auto() {
+  const c = D.ch3, pv = c.platform_view, r = c.total_sales_rdit, dec = c.decomposition_4w, bu = c.budget_increase, v = c.validation_against_truth;
+  $("auto-q").textContent = c.question;
+  $("auto-answer").innerHTML = `No. Reported search revenue rose ${fmt(pv.reported_increase_pct, 0)}% and reported ROAS went from ${fmt(pv.reported_roas_before, 2)} to ${fmt(pv.reported_roas_after, 2)},
+    but total sales jumped <b>${fmt(r.jump_pct, 1)}%</b> (95%: ${fmt(r.ci_pct[0], 1)}% to ${fmt(r.ci_pct[1], 1)}%). Truth: ${fmt(v.true_effect_pct, 2)}%.`;
+  const s = c.series, n = s.date.length, xs = [...Array(n).keys()].map((i) => i - 28);
+  const roll = (a) => a.map((_, i) => { const w = a.slice(Math.max(0, i - 6), i + 1); return w.reduce((p, q) => p + q, 0) / w.length; });
+  const idx = (a) => { const base = a.slice(0, 28).reduce((p, q) => p + q, 0) / 28; return roll(a).map((x) => (100 * x) / base); };
+  const rev = idx(s.revenue), rep = idx(s.search_reported);
+  const svg = $("auto-chart");
+  const fr = frame(svg, { xd: [-28, 27], yd: [80, Math.max(...rep) * 1.05], xt: [-28, -14, 0, 14, 27], xfmt: (t) => (t === 0 ? "switch" : `${t > 0 ? "+" : ""}${t}d`) });
+  el("line", { x1: fr.x(0), x2: fr.x(0), y1: fr.m.t, y2: fr.H - fr.m.b, stroke: "var(--ink-2)", "stroke-width": 1 }, svg);
+  el("path", { d: path(xs, rep, fr.x, fr.y), fill: "none", stroke: "var(--naive)", "stroke-width": 2 }, svg);
+  el("path", { d: path(xs, rev, fr.x, fr.y), fill: "none", stroke: "var(--ink)", "stroke-width": 2 }, svg);
+  el("text", { x: fr.x(27) - 2, y: fr.y(rep[n - 1]) - 8, "text-anchor": "end", class: "lab-strong" }, svg, `reported ${fmt(rep[n - 1], 0)}`);
+  el("text", { x: fr.x(27) - 2, y: fr.y(rev[n - 1]) + 16, "text-anchor": "end", class: "lab-strong" }, svg, `total ${fmt(rev[n - 1], 0)}`);
+  el("text", { x: fr.x(2), y: fr.y(rev[30]) + 30, class: "lab" }, svg, "steady rise, no jump at the switch");
+  crosshair(svg, fr, xs, (i) => `<b>${s.date[i]}</b><br>Reported search: ${fmt(rep[i], 0)}<br>Total revenue: ${fmt(rev[i], 0)}`);
+
+  // placebo histogram
+  const pj = r.placebo_jumps_pct, lo = Math.floor(Math.min(...pj, r.jump_pct)), hi = Math.ceil(Math.max(...pj, r.jump_pct));
+  const bw = 0.5, bins = []; for (let b = lo; b < hi; b += bw) bins.push({ a: b, b: b + bw, n: pj.filter((x) => x >= b && x < b + bw).length });
+  const hs = $("placebo-hist"), maxN = Math.max(...bins.map((b) => b.n));
+  const fh = frame(hs, { xd: [lo, hi], yd: [0, maxN * 1.15], xfmt: (t) => `${t}%`, ylab: "past dates" });
+  for (const b of bins) {
+    const x0 = fh.x(b.a) + 1, x1 = fh.x(b.b) - 1;
+    const rect = el("rect", { x: x0, width: Math.max(1, x1 - x0), y: fh.y(b.n), height: fh.y(0) - fh.y(b.n), fill: "var(--other)", rx: 2 }, hs);
+    hover(rect, `<b>${fmt(b.a, 1)}% to ${fmt(b.b, 1)}%</b><br>${b.n} past dates`);
+  }
+  el("line", { x1: fh.x(r.jump_pct), x2: fh.x(r.jump_pct), y1: fh.m.t, y2: fh.H - fh.m.b, stroke: "var(--est)", "stroke-width": 2.5 }, hs);
+  el("text", { x: fh.x(r.jump_pct) + 6, y: fh.m.t + 12, class: "lab-strong" }, hs, `switch: ${fmt(r.jump_pct, 1)}% (p = ${fmt(r.placebo_p, 2)})`);
+
+  tiles("auto-tiles", [
+    { cls: "naive", k: "Reported increase", v: `+${krw(dec.reported_increase_krw_m)}`, s: `ad-credited share of sales ${fmt(pv.ad_credited_share_of_revenue_before_pct, 1)}% → ${fmt(pv.ad_credited_share_of_revenue_after_pct, 1)}%` },
+    { cls: "est", k: "Measured extra sales", v: krw(dec.true_incremental_krw_m), s: `95%: ${fmt(r.incremental_ci_krw_m[0], 0)} to ${fmt(r.incremental_ci_krw_m[1], 0)}M` },
+    { cls: "truth", k: "True extra sales", v: krw(v.true_incremental_krw_m), s: `re-credited share ${fmt(v.true_recredited_share_pct, 0)}%` },
+  ]);
+  tiles("up-tiles", [
+    { cls: "naive", k: "Reported ROAS that prompted it", v: fmt(pv.reported_roas_after, 2) },
+    { cls: "est", k: "Marginal iROAS of the extra budget", v: fmt(bu.marginal_iroas, 2), s: `95%: ${range(bu.marginal_iroas_ci)}` },
+    { cls: "truth", k: "True marginal iROAS", v: fmt(v.budget_increase_true_marginal_iroas, 2), s: "below break-even" },
+  ]);
+  $("up-note").textContent = `Search budget +30% from week ${bu.week} (KRW ${fmt(bu.extra_search_spend_4w_krw_m, 1)}M extra over 4 weeks). Search spend per won of sales rose from ${fmt(bu.search_spend_per_sales_before_switch_pct, 1)}% to ${fmt(bu.search_spend_per_sales_after_increase_pct, 1)}%. A raw before/after view of total sales would credit the switch with +${fmt(pv.total_revenue_change_pct_raw, 1)}%: that is short video returning after the pause.`;
+})();
+
+// ------------------------------------------------------------ budget
+(function budget() {
+  const c = D.ch4, B = c.models.before_tests, A = c.models.after_tests, W = c.models.all_weeks, chs = c.channels;
+  $("budget-q").textContent = c.question;
+  const fin = W.plans.risk_aware;
+  $("budget-answer").innerHTML = `Shift money from retargeting and some search into short video, keeping the total flat, and move only where the model is confident.
+    Run through the true world, that plan earns ${krw(fin.true_gain_krw_m)} a year, <b>${fmt(fin.share_of_best_possible * 100, 0)}%</b> of the best possible ${krw(c.true_best_plan.true_gain_krw_m)};
+    the plan that follows the model's average earns ${fmt(W.plans.mean.share_of_best_possible * 100, 0)}%.`;
+
+  // ROI dot-whisker
+  const X = D.cross, svg = $("roi"), naive = Object.fromEntries(X.channels.map((r) => [r.channel, r.reported_roas]));
+  const t = X.totals;
+  tiles("xp-tiles", [
+    { cls: "naive", k: "Revenue all platforms claim", v: krw(t.reported_krw_m), s: `${fmt(t.share_claimed_by_ads_pct, 1)}% of sales` },
+    { cls: "est", k: "Revenue ads actually added", v: krw(t.incremental_krw_m), s: `90%: ${fmt(t.incremental_ci90_krw_m[0], 0)} to ${fmt(t.incremental_ci90_krw_m[1], 0)}M · ${fmt(t.share_added_by_ads_pct, 1)}% of sales` },
+    { cls: "truth", k: "Truth", v: krw(t.true_incremental_krw_m), s: `${fmt(t.true_share_added_by_ads_pct, 1)}% of sales` },
+    { cls: "", k: "Claimed ÷ added", v: `${fmt(t.claimed_vs_added, 2)}×`, s: `truth ${fmt(t.true_claimed_vs_added, 2)}×` },
+  ]);
+  const VERDICT = { "under-credited": "Under-credited: headroom", "over-credited": "Over-credited", unclear: "Unclear: report inside the model's range" };
+  table("xp-table", ["Channel", "Spend, M", "Claimed, M", "Reported ROAS", "Added, M (90%)", "Model ROI", "True ROI", "Claimed ÷ added", "Verdict", "Truth says"],
+    X.channels.map((r) => [CH[r.channel], fmt(r.spend_krw_m, 0), fmt(r.reported_krw_m, 0), fmt(r.reported_roas, 2),
+      `${fmt(r.incremental_krw_m, 0)} (${fmt(r.incremental_ci90_krw_m[0], 0)}-${fmt(r.incremental_ci90_krw_m[1], 0)})`,
+      fmt(r.incremental_roi, 2), fmt(r.true_roi, 2), `${fmt(r.credit_ratio, 2)}×`, VERDICT[r.verdict], r.true_verdict]), [1, 2, 3, 5, 6, 7]);
+  const under = X.channels.filter((r) => r.verdict === "under-credited").map((r) => CH[r.channel].toLowerCase());
+  const unclear = X.channels.filter((r) => r.verdict === "unclear").map((r) => CH[r.channel].toLowerCase());
+  $("xp-note").textContent = `The platforms' claims add up to ${fmt(t.claimed_vs_added, 2)} times what ads added (90%: ${fmt(t.claimed_vs_added_ci90[0], 2)}-${fmt(t.claimed_vs_added_ci90[1], 2)}×). `
+    + (under.length ? `Only ${under.join(" and ")} is credited with less than it adds: that is where the headroom is. ` : "")
+    + (unclear.length ? `For ${unclear.join(" and ")} the report sits inside the model's range, so no call is made. ` : "")
+    + `Ranking channels by their own reported ROAS would put money in the wrong places. ${X.experiment_check.note}`;
+
+  const MR = c.marginal_roi;
+  table("mroi", ["Channel", "Before tests (90%)", "After tests, calibrated (90%)", "All 104 weeks (90%)", "Truth"],
+    chs.map((ch) => [CH[ch], ...["before_tests", "after_tests", "all_weeks"].map((n) => `${fmt(MR.models[n][ch].median, 2)} (${range(MR.models[n][ch].ci90)})`), `<b>${fmt(MR.truth[ch], 2)}</b>`]), [4]);
+  const covered = Object.values(MR.models.after_tests).filter((v) => v.truth_inside).length;
+  const allBelow = chs.every((ch) => MR.models.all_weeks[ch].ci90[1] < 1);
+  const order = chs.slice().sort((p, q) => MR.models.all_weeks[q].median - MR.models.all_weeks[p].median).map((ch) => CH[ch].toLowerCase());
+  $("mroi-note").textContent = `The calibrated model's interval holds the true marginal ROI for ${covered} of 4 channels. `
+    + (allBelow ? `At today's budget the next won returns less than a won in every channel (all 90% ranges below 1). Moving money from ${order[order.length - 1]} toward ${order[0]} helps, and the total budget itself is worth testing lower. ` : "")
+    + "Average ROI (chart below) says which channels paid back so far; marginal ROI says where the next won should go.";
+  const xmax = Math.max(3.6, ...chs.map((ch) => Math.max(A.roi[ch].ci90[1], B.roi[ch].ci90[1], naive[ch]))) * 1.03;
+  const fr = frame(svg, { xd: [0, xmax], yd: [0, chs.length], yt: [], m: { l: 96, r: 18, t: 10, b: 30 }, xlab: "return per won" });
+  for (const t of niceTicks(0, xmax)) el("line", { x1: fr.x(t), x2: fr.x(t), y1: fr.m.t, y2: fr.H - fr.m.b, stroke: "var(--grid)" }, svg);
+  el("line", { x1: fr.x(1), x2: fr.x(1), y1: fr.m.t, y2: fr.H - fr.m.b, stroke: "var(--ink-2)" }, svg);
+  el("text", { x: fr.x(1) + 4, y: fr.m.t + 10, class: "lab" }, svg, "break-even");
+  chs.forEach((ch, i) => {
+    const yc = fr.y(chs.length - i - 0.5);
+    el("text", { x: fr.m.l - 10, y: yc + 4, "text-anchor": "end", class: "lab-strong" }, svg, CH[ch]);
+    [[B, -9, "var(--other)"], [A, 7, "var(--est)"]].forEach(([M, dy, col]) => {
+      const r = M.roi[ch];
+      el("line", { x1: fr.x(r.ci90[0]), x2: fr.x(r.ci90[1]), y1: yc + dy, y2: yc + dy, stroke: col, "stroke-width": 2.5, "stroke-linecap": "round" }, svg);
+      el("circle", { cx: fr.x(r.median), cy: yc + dy, r: 4.5, fill: col, stroke: "var(--surface)", "stroke-width": 2 }, svg);
+    });
+    el("line", { x1: fr.x(A.roi[ch].truth), x2: fr.x(A.roi[ch].truth), y1: yc - 17, y2: yc + 15, stroke: "var(--ink)", "stroke-width": 2.5 }, svg);
+    el("circle", { cx: fr.x(naive[ch]), cy: yc - 1, r: 5, fill: "none", stroke: "var(--naive)", "stroke-width": 2 }, svg);
+    const hit = el("rect", { x: fr.m.l, width: fr.W - fr.m.l - fr.m.r, y: yc - 22, height: 44, fill: "transparent" }, svg);
+    hover(hit, `<b>${CH[ch]}</b><br>Before tests: ${fmt(B.roi[ch].median, 2)} (${range(B.roi[ch].ci90)})<br>After tests: ${fmt(A.roi[ch].median, 2)} (${range(A.roi[ch].ci90)})<br>Truth: ${fmt(A.roi[ch].truth, 2)}<br>Platform-reported: ${fmt(naive[ch], 2)}`);
+  });
+  table("roi-table", ["Channel", "Before tests (90%)", "After tests (90%)", "Truth", "Platform-reported"],
+    chs.map((ch) => [CH[ch], `${fmt(B.roi[ch].median, 2)} (${range(B.roi[ch].ci90)})`, `${fmt(A.roi[ch].median, 2)} (${range(A.roi[ch].ci90)})`, fmt(A.roi[ch].truth, 2), fmt(naive[ch], 2)]), [3, 4]);
+
+  // response curves
+  const seg = $("curve-seg"), M = c.true_response_curves.multipliers;
+  function drawCurve(ch) {
+    const svg2 = $("curve"); svg2.innerHTML = "";
+    const r = A.response_curves[ch], t = c.true_response_curves.gain_krw_m[ch];
+    const lo = Math.min(...r.low, ...t), hi = Math.max(...r.high, ...t);
+    const f2 = frame(svg2, { xd: [0, 2], yd: [lo * 1.05, hi * 1.1], xt: [0, 0.5, 1, 1.5, 2], xfmt: (v) => `${v}×`, yfmt: (v) => fmt(v, 0), xlab: "budget vs today" });
+    el("line", { x1: f2.x(1), x2: f2.x(1), y1: f2.m.t, y2: f2.H - f2.m.b, stroke: "var(--axis)" }, svg2);
+    el("text", { x: f2.x(1) + 4, y: f2.m.t + 10, class: "lab" }, svg2, "today");
+    el("path", { d: band(M, r.low, r.high, f2.x, f2.y), fill: "var(--est-band)" }, svg2);
+    el("path", { d: path(M, r.median, f2.x, f2.y), fill: "none", stroke: "var(--est)", "stroke-width": 2 }, svg2);
+    el("path", { d: path(M, t, f2.x, f2.y), fill: "none", stroke: "var(--ink)", "stroke-width": 2 }, svg2);
+    crosshair(svg2, f2, M, (i) => `<b>${CH[ch]} ${M[i]}×</b><br>Model: ${fmt(r.median[i], 0)}M (${fmt(r.low[i], 0)} to ${fmt(r.high[i], 0)})<br>Truth: ${fmt(t[i], 0)}M`);
+    seg.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.ch === ch));
+  }
+  seg.innerHTML = chs.map((ch) => `<button data-ch="${ch}" aria-pressed="false">${CH[ch]}</button>`).join("");
+  seg.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => drawCurve(b.dataset.ch)));
+  drawCurve("search");
+
+  // plans
+  const rows = [];
+  const label = { before_tests: "Before tests (78 wk)", after_tests: "After tests, calibrated (78 wk)", all_weeks: "All 104 weeks" };
+  for (const [name, m] of Object.entries(c.models)) for (const [kind, p] of Object.entries(m.plans)) {
+    rows.push({ hl: name === "all_weeks" && kind === "risk_aware", cells: [label[name], kind === "mean" ? "Expected gain" : "Risk-aware",
+      ...chs.map((ch) => `${fmt(p.multipliers[ch], 2)}×`), `${fmt(p.predicted_gain_krw_m.median, 0)} (${fmt(p.predicted_gain_krw_m.ci90[0], 0)} to ${fmt(p.predicted_gain_krw_m.ci90[1], 0)})`,
+      fmt(p.true_gain_krw_m, 1), `${fmt(p.share_of_best_possible * 100, 0)}%`] });
+  }
+  rows.push({ cells: ["Best possible (truth)", "–", ...chs.map((ch) => `${fmt(c.true_best_plan.multipliers[ch], 2)}×`), "–", fmt(c.true_best_plan.true_gain_krw_m, 1), "100%"] });
+  table("plans", ["Model", "Plan", ...chs.map((ch) => CH[ch]), "Model's predicted gain, M (90%)", "True gain, M", "Of best"], rows, [2, 3, 4, 5, 6, 7, 8]);
+  $("plans-note").textContent = "Search is the least certain channel, and the models under-value it. Plans that follow the average cut search hard and lose most of the possible gain; risk-aware plans move less and keep more. The next experiment should be on search.";
+})();
+
+// ------------------------------------------------------------ readout memo
+(function memo() {
+  const r = D.report;
+  const g = r.recommendation.expected_gain_krw_m;
+  $("memo").innerHTML = `
+    <div><div class="eyebrow">Measurement readout · fictional brand, synthetic data</div><h2 style="margin-top:4px">PAWLY: what the ads really did, and what to do next</h2></div>
+    <dl><dt>To</dt><dd>${r.to}</dd><dt>From</dt><dd>${r.from}</dd><dt>Period</dt><dd>${r.period}</dd></dl>
+    <section class="aside" lang="ko"><h3>사장님용 세 줄 요약 (Korean summary for the business owner)</h3><ol style="margin:0;padding-left:20px;display:grid;gap:6px">${r.korean_summary.map((s) => `<li>${s}</li>`).join("")}</ol>
+      <p class="small">Full Korean readout: docs/advertiser_readout_ko.md</p></section>
+    <section><h3>Bottom line</h3><ul>${r.bottom_line.map((b) => `<li>${b}</li>`).join("")}</ul></section>
+    <section><h3>What we measured</h3><div class="tbl"><table><thead><tr><th>Question</th><th>Method</th><th>Answer</th><th>Confidence</th></tr></thead><tbody>
+      ${r.measured.map((m) => `<tr><td>${m.question}</td><td>${m.method}</td><td>${m.answer}</td><td>${m.confidence}</td></tr>`).join("")}</tbody></table></div></section>
+    <section><h3>Recommendation for next year</h3><div class="tbl"><table><thead><tr><th>Channel</th><th>Now, KRW M/week</th><th>Proposed</th><th>Change</th></tr></thead><tbody>
+      ${r.recommendation.budget.map((b) => `<tr><td>${b.channel}</td><td class="n">${fmt(b.now_krw_m_per_week, 1)}</td><td class="n">${fmt(b.proposed_krw_m_per_week, 1)}</td><td class="n">${b.change_pct > 0 ? "+" : ""}${b.change_pct}%</td></tr>`).join("")}</tbody></table></div>
+      <p class="note" style="margin-top:6px">Expected extra sales over a year: ${krw(g.median)} (90%: ${fmt(g.ci90[0], 0)} to ${fmt(g.ci90[1], 0)}M). ${r.recommendation.note}</p></section>
+    <section><h3>Does it pay? Sales returns in profit terms</h3><div class="tbl"><table><thead><tr><th>Channel</th><th>Sales per won (average)</th><th>Sales per next won</th><th>Lifetime multiple needed (average)</th><th>Lifetime multiple needed (next won)</th></tr></thead><tbody>
+      ${r.profit.rows.map((p) => `<tr><td>${p.channel}</td><td class="n">${fmt(p.average_return, 2)}</td><td class="n">${fmt(p.next_won_return, 2)}</td><td class="n">${fmt(p.lifetime_multiple_needed_average, 1)}×</td><td class="n">${fmt(p.lifetime_multiple_needed_next_won, 1)}×</td></tr>`).join("")}</tbody></table></div>
+      <p class="note" style="margin-top:6px">${r.profit.note}</p></section>
+    <section><h3>What we are not sure about</h3><ul>${r.not_sure.map((x) => `<li>${x}</li>`).join("")}</ul></section>
+    <section><h3>Next test</h3><p><b>${r.next_test.what}.</b> ${r.next_test.why}. ${r.next_test.eligibility}.</p></section>
+    <section><h3>Learning agenda for 2027</h3><div class="tbl"><table><thead><tr><th>Quarter</th><th>Question</th><th>Study</th><th>Decides</th><th>Why now</th></tr></thead><tbody>
+      ${r.learning_agenda.map((a) => `<tr><td>${a.quarter}</td><td>${a.question}</td><td>${a.study}</td><td>${a.decides}</td><td>${a.why_now}</td></tr>`).join("")}</tbody></table></div></section>
+    <section><h3>What we need from you</h3><ul>${r.asks.map((x) => `<li>${x}</li>`).join("")}</ul></section>`;
+  $("ae-notes").innerHTML = `
+    <div><div class="eyebrow">Internal · not sent to the advertiser</div><h2 style="margin-top:4px">Notes for the account team</h2></div>
+    <ul>${r.account_team_notes.map((x) => `<li>${x}</li>`).join("")}</ul>`;
+})();
+
+// ------------------------------------------------------------ checks
+(function checks() {
+  const C = D.validation.checks, V = D.validation;
+  const div = Object.entries(C.convergence).filter(([k]) => k.includes("divergences")).reduce((s, [, v]) => s + v, 0);
+  const rh = Math.max(...Object.entries(C.convergence).filter(([k]) => k.includes("rhat")).map(([, v]) => v));
+  tiles("check-tiles", [
+    { cls: "est", k: "Headline numbers whose interval holds the truth", v: `${V.covered} of ${V.n}` },
+    { cls: "est", k: "A/A false positives, 6-week geo test", v: `${fmt(C.aa_false_positives_6w.calibrated_holdout * 100, 1)}%`, s: `before calibration ${fmt(C.aa_false_positives_6w.uncalibrated * 100, 0)}%` },
+    { cls: "est", k: "Interval coverage over 60 luck draws", v: `${fmt(C.monte_carlo_60_draws.without_contaminated_pair.ci_coverage * 100, 0)}%`, s: "geo test, after the check" },
+    { cls: "est", k: "Placebo dates, auto-bidding check", v: `${C.placebo.ch3_dates}`, s: `p = ${fmt(C.placebo.ch3_p, 2)}` },
+    { cls: "est", k: "Sampler health (Bayesian fits)", v: `${div} divergences`, s: `max R-hat ${fmt(rh, 3)}` },
+  ]);
+  $("log").innerHTML = D.log.map((e) => `<article><h3>${e.title}</h3><p>${e.body}</p></article>`).join("");
+})();
+</script>
+</body>
+</html>

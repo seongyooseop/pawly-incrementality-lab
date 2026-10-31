@@ -1,0 +1,4 @@
+.venv/
+__pycache__/
+# cached MMM posterior draws (about 11 MB); regenerate with: python src/ch4_mmm.py --refit
+models/

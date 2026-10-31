@@ -1,0 +1,174 @@
+{
+  "to": "PAWLY marketing lead",
+  "from": "Measurement team, with the account team",
+  "period": "Nov 2024 - Oct 2026 (104 weeks)",
+  "bottom_line": [
+    "Short-form video pays back in sales: about KRW 1.2 of extra sales per won during the test (range 0.6-1.8), and about 1.5 counting the two weeks after it, when part of the effect lands. The 4-week summer pause cost about KRW 93M in sales (range KRW 32M-KRW 164M), not the KRW 245M a before/after view suggests.",
+    "The jump in reported search revenue after switching to AI auto-bidding (+93%) is almost entirely sales that were already happening, now credited to search. Total sales did not move (-0.2%, range -2.0% to +1.6%).",
+    "The 30% search budget increase that followed returned about KRW 0.15 per won (range -0.35 to 0.64): below break-even.",
+    "Added up, the platforms claim 1.3 times the sales that ads actually added. Short video is the only channel credited with less than it adds. At today's spend, the next won returns less than a won in every channel (model: 0.3-0.8), so shift budget first and then test a smaller total.",
+    "In profit terms (gross margin assumed at 40%), short video pays back if a new customer's lifetime purchases reach 1.6x their first; the next won in any channel needs at least 3.2x. Your repeat-purchase data decides whether to add budget."
+  ],
+  "korean_summary": [
+    "숏폼 영상 광고는 효과가 있습니다. 광고비 1원당 매출이 약 1.2원(실험 직후 2주까지 보면 약 1.5원) 늘었습니다. 광고 플랫폼 화면에는 0.3원으로 나와 크게 과소평가되어 있습니다.",
+    "검색 광고를 자동 입찰로 바꾼 뒤 화면상 매출은 93% 늘었지만, 실제 전체 매출은 그대로였습니다. 원래 사던 손님이 광고 덕분으로 다시 집계된 것입니다. 그 숫자를 보고 늘린 예산은 회수되지 않았습니다.",
+    "내년에는 리타깃팅을 줄이고 숏폼 영상을 늘리되, 총예산은 그대로 둡니다. 검색은 먼저 일부 지역에서 꺼 보는 실험으로 확인한 뒤 결정합니다. 광고 1원을 더 쓸 때 돌아오는 매출이 모든 채널에서 1원보다 적어, 재구매 데이터로 이익을 확인하는 것이 다음 순서입니다."
+  ],
+  "measured": [
+    {
+      "question": "Does short video add sales?",
+      "method": "Geo test, 20 matched region pairs, 6 weeks",
+      "answer": "Yes. iROAS 1.20 (0.58-1.81); 1.52 with a 2-week cooldown; brand searches -5.3% in regions without video",
+      "confidence": "High: A/A-checked design, one contaminated pair found and removed"
+    },
+    {
+      "question": "What did the summer pause cost?",
+      "method": "Causal impact (Bayesian structural time series)",
+      "answer": "KRW 93M (KRW 32M-KRW 164M)",
+      "confidence": "Medium: wide range, but consistent with the geo test"
+    },
+    {
+      "question": "Is auto-bidding adding sales?",
+      "method": "Total sales around the switch + 456 placebo dates",
+      "answer": "No measurable change (-0.2%); placebo p = 0.92",
+      "confidence": "High for 'no large effect'; a gain under ~2% cannot be ruled out"
+    },
+    {
+      "question": "How to split next year's budget?",
+      "method": "Media mix model checked against both experiments",
+      "answer": "Move money from retargeting and search to short video; keep the total flat",
+      "confidence": "Medium: search is the least certain channel"
+    }
+  ],
+  "recommendation": {
+    "budget": [
+      {
+        "channel": "Search (incl. auto-bidding)",
+        "channel_ko": "검색 광고(자동 입찰 포함)",
+        "now_krw_m_per_week": 19.4,
+        "proposed_krw_m_per_week": 17.1,
+        "change_pct": -12
+      },
+      {
+        "channel": "Short-form video",
+        "channel_ko": "숏폼 영상",
+        "now_krw_m_per_week": 25.0,
+        "proposed_krw_m_per_week": 28.7,
+        "change_pct": 15
+      },
+      {
+        "channel": "Social",
+        "channel_ko": "소셜",
+        "now_krw_m_per_week": 8.3,
+        "proposed_krw_m_per_week": 8.4,
+        "change_pct": 1
+      },
+      {
+        "channel": "Retargeting",
+        "channel_ko": "리타깃팅",
+        "now_krw_m_per_week": 5.6,
+        "proposed_krw_m_per_week": 4.0,
+        "change_pct": -28
+      }
+    ],
+    "expected_gain_krw_m": {
+      "median": 57.1,
+      "ci90": [
+        -15.6,
+        112.8
+      ]
+    },
+    "note": "Moves are capped where the model is unsure (risk-aware plan). Revisit search after the next test."
+  },
+  "profit": {
+    "gross_margin_assumed": 0.4,
+    "rows": [
+      {
+        "channel": "Search (incl. auto-bidding)",
+        "channel_ko": "검색 광고(자동 입찰 포함)",
+        "average_return": 0.93,
+        "next_won_return": 0.44,
+        "lifetime_multiple_needed_average": 2.7,
+        "lifetime_multiple_needed_next_won": 5.7
+      },
+      {
+        "channel": "Short-form video",
+        "channel_ko": "숏폼 영상",
+        "average_return": 1.61,
+        "next_won_return": 0.78,
+        "lifetime_multiple_needed_average": 1.6,
+        "lifetime_multiple_needed_next_won": 3.2
+      },
+      {
+        "channel": "Social",
+        "channel_ko": "소셜",
+        "average_return": 1.22,
+        "next_won_return": 0.63,
+        "lifetime_multiple_needed_average": 2.0,
+        "lifetime_multiple_needed_next_won": 4.0
+      },
+      {
+        "channel": "Retargeting",
+        "channel_ko": "리타깃팅",
+        "average_return": 0.65,
+        "next_won_return": 0.3,
+        "lifetime_multiple_needed_average": 3.8,
+        "lifetime_multiple_needed_next_won": 8.3
+      }
+    ],
+    "note": "Returns are in sales, from the 104-week model. A won of ad spend pays back when return x gross margin x lifetime multiple is at least 1. 'Lifetime multiple' = a new customer's total purchases divided by their first, which only PAWLY's own order data can tell. Margin of 40% is a placeholder."
+  },
+  "not_sure": [
+    "Search's return is the widest range in the model (90%: 0.4-1.7). A plan built on the model's average alone would cut search 27%; this plan trims it 12% and leaves any bigger cut to the search test.",
+    "The pause estimate rests on a model, not a holdout; treat it as supporting the geo test, not replacing it.",
+    "Profit depends on repeat buying we have not measured yet; until then, read every return as sales, not profit."
+  ],
+  "next_test": {
+    "what": "Search holdout: switch search off in 30% of regions (chosen within size bands) for 6 weeks, plus a 2-week cooldown",
+    "why": "Search is where uncertainty costs the most; a direct test settles the next budget decision",
+    "eligibility": "A 30% holdout detects a return of 0.75 or more, almost as sensitive as switching off half the regions (0.7), with about 59% of the sales at risk"
+  },
+  "learning_agenda": [
+    {
+      "quarter": "Q1 2027",
+      "question": "What does search really add?",
+      "study": "Search holdout in 30% of regions, 6 weeks + 2-week cooldown",
+      "decides": "Search budget",
+      "why_now": "Widest model range of any channel (90%: 0.4-1.7); reported ROAS 3.4"
+    },
+    {
+      "quarter": "Q2 2027",
+      "question": "Is the total budget too high?",
+      "study": "Step-down test: matched regions run all channels 20% lower for 6 weeks",
+      "decides": "Total budget",
+      "why_now": "Marginal ROI below 1 in every channel (model 0.3-0.8)"
+    },
+    {
+      "quarter": "Q3 2027",
+      "question": "How much of retargeting is re-credited?",
+      "study": "Audience holdout: 15% of retargeting audiences not served for 4 weeks",
+      "decides": "Retargeting cut size",
+      "why_now": "Credited 4x what it adds"
+    },
+    {
+      "quarter": "Q4 2027",
+      "question": "What is next year's plan?",
+      "study": "Refit the media mix model with every experiment so far as calibration; brand lift survey during a video flight",
+      "decides": "2028 budget split and the upper-funnel KPI",
+      "why_now": "Each experiment narrows one channel's range; the survey adds the brand side the sales tests miss"
+    }
+  ],
+  "asks": [
+    "Share the media plan before each test: booked budgets are the denominator of every return figure.",
+    "Share gross margin and repeat-purchase rates by first-purchase month, so returns can be read as profit.",
+    "Tell us about regional promotions during a test (the G26 retail promotion would have inflated the result by about a quarter).",
+    "Keep budgets flat during tests, and send daily total sales from your own order system."
+  ],
+  "account_team_notes": [
+    "Growth opportunity: short video +15% is about KRW 192M more video spend a year, backed by an experiment, not by the platform's own report.",
+    "Position search as 'prove, then reinvest', not as a cut: the holdout either confirms its value or frees budget for video.",
+    "The total-budget step-down builds trust: an advertiser who sees us test spending less believes us when we ask for more.",
+    "Studies to propose next: 30% regional holdout for search, audience holdout for retargeting, brand lift survey for video, recalibrated MMM.",
+    "Reusable for the next client: the study-selection table and the eligibility calculation (power from past weeks, A/A calibration) run on any region-by-day sales table in the same format."
+  ]
+}

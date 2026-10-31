@@ -1,0 +1,189 @@
+{
+  "history_unchanged": true,
+  "promo_region": "G26",
+  "geo_test": {
+    "weeks": [
+      79,
+      84
+    ],
+    "true_revenue_effect_krw": -80046594,
+    "true_brand_search_effect": -22402,
+    "video_spend_withheld_krw": 53972835,
+    "true_iroas": 1.483,
+    "go_dark_revenue_cf_krw": 1465830331,
+    "by_region": {
+      "G01": {
+        "effect_krw": -11155060,
+        "withheld_krw": 7586161,
+        "bsv_effect": -2964,
+        "bsv_cf": 73815,
+        "effect_cool_krw": -12719996
+      },
+      "G02": {
+        "effect_krw": -1348806,
+        "withheld_krw": 922670,
+        "bsv_effect": -332,
+        "bsv_cf": 8126,
+        "effect_cool_krw": -1532911
+      },
+      "G05": {
+        "effect_krw": -2417276,
+        "withheld_krw": 1653260,
+        "bsv_effect": -608,
+        "bsv_cf": 15649,
+        "effect_cool_krw": -2753208
+      },
+      "G06": {
+        "effect_krw": -4437034,
+        "withheld_krw": 3041395,
+        "bsv_effect": -1096,
+        "bsv_cf": 27740,
+        "effect_cool_krw": -5037623
+      },
+      "G09": {
+        "effect_krw": -1760649,
+        "withheld_krw": 1155580,
+        "bsv_effect": -567,
+        "bsv_cf": 14148,
+        "effect_cool_krw": -2026612
+      },
+      "G11": {
+        "effect_krw": -6287234,
+        "withheld_krw": 4312405,
+        "bsv_effect": -1534,
+        "bsv_cf": 39261,
+        "effect_cool_krw": -7139491
+      },
+      "G13": {
+        "effect_krw": -5163382,
+        "withheld_krw": 3484764,
+        "bsv_effect": -1517,
+        "bsv_cf": 38440,
+        "effect_cool_krw": -5931333
+      },
+      "G14": {
+        "effect_krw": -2394220,
+        "withheld_krw": 1654195,
+        "bsv_effect": -557,
+        "bsv_cf": 13915,
+        "effect_cool_krw": -2712311
+      },
+      "G15": {
+        "effect_krw": -3006176,
+        "withheld_krw": 2057396,
+        "bsv_effect": -799,
+        "bsv_cf": 20115,
+        "effect_cool_krw": -3426403
+      },
+      "G18": {
+        "effect_krw": -7082286,
+        "withheld_krw": 4784123,
+        "bsv_effect": -1995,
+        "bsv_cf": 48835,
+        "effect_cool_krw": -8084092
+      },
+      "G20": {
+        "effect_krw": -3105938,
+        "withheld_krw": 2049652,
+        "bsv_effect": -943,
+        "bsv_cf": 22809,
+        "effect_cool_krw": -3568742
+      },
+      "G22": {
+        "effect_krw": -871357,
+        "withheld_krw": 589662,
+        "bsv_effect": -227,
+        "bsv_cf": 5837,
+        "effect_cool_krw": -997583
+      },
+      "G23": {
+        "effect_krw": -4239385,
+        "withheld_krw": 2792920,
+        "bsv_effect": -1384,
+        "bsv_cf": 34767,
+        "effect_cool_krw": -4864017
+      },
+      "G25": {
+        "effect_krw": -2354326,
+        "withheld_krw": 1603283,
+        "bsv_effect": -636,
+        "bsv_cf": 16398,
+        "effect_cool_krw": -2692817
+      },
+      "G28": {
+        "effect_krw": -4639752,
+        "withheld_krw": 3103574,
+        "bsv_effect": -1372,
+        "bsv_cf": 34829,
+        "effect_cool_krw": -5302677
+      },
+      "G29": {
+        "effect_krw": -3767133,
+        "withheld_krw": 2464480,
+        "bsv_effect": -1244,
+        "bsv_cf": 30686,
+        "effect_cool_krw": -4341211
+      },
+      "G30": {
+        "effect_krw": -4954972,
+        "withheld_krw": 3341611,
+        "bsv_effect": -1352,
+        "bsv_cf": 33306,
+        "effect_cool_krw": -5657159
+      },
+      "G34": {
+        "effect_krw": -2795156,
+        "withheld_krw": 1876304,
+        "bsv_effect": -802,
+        "bsv_cf": 20394,
+        "effect_cool_krw": -3200373
+      },
+      "G35": {
+        "effect_krw": -5486996,
+        "withheld_krw": 3676308,
+        "bsv_effect": -1592,
+        "bsv_cf": 40495,
+        "effect_cool_krw": -6260108
+      },
+      "G38": {
+        "effect_krw": -2779457,
+        "withheld_krw": 1823090,
+        "bsv_effect": -881,
+        "bsv_cf": 21932,
+        "effect_cool_krw": -3186903
+      }
+    },
+    "cooldown_weeks": [
+      85,
+      86
+    ]
+  },
+  "video_pause": {
+    "weeks": [
+      89,
+      92
+    ],
+    "true_revenue_effect_krw": -114663610,
+    "video_spend_saved_krw": 85842814,
+    "true_iroas": 1.336
+  },
+  "auto_bid_switch": {
+    "weeks": [
+      97,
+      100
+    ],
+    "true_revenue_effect_krw": 13229798,
+    "true_effect_pct_of_revenue": 0.64,
+    "reported_search_revenue_increase_krw": 223236128,
+    "reported_increase_pct": 80.5
+  },
+  "budget_up": {
+    "weeks": [
+      101,
+      104
+    ],
+    "true_revenue_effect_krw": 13675608,
+    "extra_spend_krw": 22289653,
+    "true_marginal_iroas": 0.614
+  }
+}

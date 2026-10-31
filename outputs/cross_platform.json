@@ -1,0 +1,106 @@
+{
+  "question": "Each platform reports its own results. Added up, how much do they claim, and what do they add?",
+  "period": "weeks 1-78 (before any test)",
+  "channels": [
+    {
+      "channel": "search",
+      "spend_krw_m": 1318.4,
+      "reported_krw_m": 4494.6,
+      "reported_roas": 3.41,
+      "incremental_krw_m": 1369.2,
+      "incremental_ci90_krw_m": [
+        518.9,
+        2701.1
+      ],
+      "incremental_roi": 1.04,
+      "true_incremental_krw_m": 1687.6,
+      "true_roi": 1.28,
+      "credit_ratio": 3.28,
+      "true_credit_ratio": 2.66,
+      "verdict": "over-credited",
+      "true_verdict": "over-credited"
+    },
+    {
+      "channel": "short_video",
+      "spend_krw_m": 1390.9,
+      "reported_krw_m": 415.1,
+      "reported_roas": 0.3,
+      "incremental_krw_m": 2536.3,
+      "incremental_ci90_krw_m": [
+        2080.6,
+        3110.2
+      ],
+      "incremental_roi": 1.82,
+      "true_incremental_krw_m": 2350.6,
+      "true_roi": 1.69,
+      "credit_ratio": 0.16,
+      "true_credit_ratio": 0.18,
+      "verdict": "under-credited",
+      "true_verdict": "under-credited"
+    },
+    {
+      "channel": "social",
+      "spend_krw_m": 646.8,
+      "reported_krw_m": 805.0,
+      "reported_roas": 1.24,
+      "incremental_krw_m": 916.4,
+      "incremental_ci90_krw_m": [
+        486.9,
+        1572.4
+      ],
+      "incremental_roi": 1.42,
+      "true_incremental_krw_m": 711.5,
+      "true_roi": 1.1,
+      "credit_ratio": 0.88,
+      "true_credit_ratio": 1.13,
+      "verdict": "unclear",
+      "true_verdict": "over-credited"
+    },
+    {
+      "channel": "retargeting",
+      "spend_krw_m": 437.5,
+      "reported_krw_m": 1211.0,
+      "reported_roas": 2.77,
+      "incremental_krw_m": 306.5,
+      "incremental_ci90_krw_m": [
+        102.0,
+        809.1
+      ],
+      "incremental_roi": 0.7,
+      "true_incremental_krw_m": 240.6,
+      "true_roi": 0.55,
+      "credit_ratio": 3.95,
+      "true_credit_ratio": 5.03,
+      "verdict": "over-credited",
+      "true_verdict": "over-credited"
+    }
+  ],
+  "totals": {
+    "spend_krw_m": 3793.6,
+    "reported_krw_m": 6925.6,
+    "incremental_krw_m": 5268.3,
+    "incremental_ci90_krw_m": [
+      4078.4,
+      6853.5
+    ],
+    "true_incremental_krw_m": 4990.2,
+    "claimed_vs_added": 1.31,
+    "claimed_vs_added_ci90": [
+      1.01,
+      1.7
+    ],
+    "true_claimed_vs_added": 1.39,
+    "revenue_krw_m": 34876.0,
+    "share_claimed_by_ads_pct": 19.9,
+    "share_added_by_ads_pct": 15.1,
+    "true_share_added_by_ads_pct": 14.3
+  },
+  "experiment_check": {
+    "short_video_geo_test_iroas": 1.2,
+    "short_video_geo_test_ci": [
+      0.58,
+      1.81
+    ],
+    "note": "The geo test (weeks 79-84) independently puts short video's return near the model's, far above the 0.30 its platform reports."
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "history_weeks": 78,
+  "revenue_bn_krw_per_year": 23.3,
+  "channels": {
+    "brand_search": {
+      "spend_bn_krw_per_year": 0.35,
+      "true_roi": 0.5,
+      "reported_roas": 5.02
+    },
+    "nonbrand_search": {
+      "spend_bn_krw_per_year": 0.53,
+      "true_roi": 1.8,
+      "reported_roas": 2.34
+    },
+    "short_video": {
+      "spend_bn_krw_per_year": 0.93,
+      "true_roi": 1.69,
+      "reported_roas": 0.3
+    },
+    "social": {
+      "spend_bn_krw_per_year": 0.43,
+      "true_roi": 1.1,
+      "reported_roas": 1.24
+    },
+    "retargeting": {
+      "spend_bn_krw_per_year": 0.29,
+      "true_roi": 0.55,
+      "reported_roas": 2.77
+    }
+  },
+  "ad_to_sales": 0.109,
+  "corr_video_search_weekly": 0.85
+}

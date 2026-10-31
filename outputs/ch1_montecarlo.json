@@ -1,0 +1,22 @@
+{
+  "draws": 60,
+  "all_pairs": {
+    "mean_bias_iroas": 0.341,
+    "rmse_iroas": 0.4,
+    "ci_coverage": 0.867
+  },
+  "without_contaminated_pair": {
+    "mean_bias_iroas": 0.059,
+    "rmse_iroas": 0.23,
+    "ci_coverage": 0.983
+  },
+  "with_cooldown": {
+    "mean_bias_iroas": 0.126,
+    "rmse_iroas": 0.299,
+    "ci_coverage": 0.983,
+    "test_only_bias_vs_full_effect": -0.151
+  },
+  "diagnostic_flags_promo_pair": 0.817,
+  "draws_with_any_false_flag": 0.217,
+  "mean_true_iroas": 1.483
+}
