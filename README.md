@@ -7,7 +7,8 @@ profit depends on repeat purchases; the methods apply to any e-commerce advertis
 process, so every estimate is graded against the truth. Shared data preparation is done in SQL (DuckDB, [`sql/marts.sql`](sql/marts.sql)); the
 studies are in Python (PyMC, statsmodels).
 
-**Open it:** `site/index.html` (one self-contained file, seven tabs, each with a "How to read this tab" guide).
+**Live demo:** https://seongyooseop.github.io/pawly-incrementality-lab/site/ (or open `site/index.html`: one
+self-contained file, seven tabs, each with a "How to read this tab" guide).
 
 ## At a glance
 
