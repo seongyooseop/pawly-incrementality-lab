@@ -109,3 +109,14 @@ Added checks that work without a truth: convergence for every fit (max R-hat 1.0
 **29. Re-running chapters 2 and 4 moved some figures slightly.**
 Adding the probability and the out-of-sample model meant re-running the samplers. The pause loss moved from 93.0M to 94.0M (95%: 30-161M); the calibrated model's plans moved to 36% (average) and 34% (risk-aware) of the best possible gain. Downstream chapters, the scorecard (still 11 of 11 inside their intervals) and the readout were rebuilt from the new fits so every page agrees.
 
+## Day 6, third review — the posting's own words (2026-11-02)
+
+**30. The cross-platform study in the posting uses GA4 data; this one used only the platforms' own reports.**
+Added a GA4 export for the own site (src/ga4_export.py, rules in world.GA4): GA4 sees only the website's consented sessions (47% of sales here) and counts each sale once, but its data-driven credit still follows clicks. Its paid total is 2.76B, half of what ads added, the opposite error from the platforms' 1.3x. Within the mix it gives search 63% of the paid credit against a 27% share of what ads added (truth 34%) and short video 13% against 48% (truth 47%): the same headroom, now from data the advertiser owns. Social and retargeting fall inside the model's range and are left unclear, although the truth calls them. The GA4 rules are stated as a limit: channel level, not user paths.
+
+**31. Refitting the MMM after the auto-bidding switch did not fix the forecast at first.**
+Refitted on weeks 1-100, the model still under-predicts weeks 101-104 by 1.5% (2 of 4 weeks inside the 90% range, against 0 of 4 before): one search curve for 100 weeks cannot bend for the last four. A level-shift term from the known switch week fixes it: 0.27% error, 4 of 4 inside. The term is not the switch's effect, though: 8.1M a week (90%: 4.1-11.9M) against a true 3.3M, because it also absorbs what the model gets wrong about search. The page says so; what the switch added stays with chapter 3's read on total sales.
+
+**32. Forty geo units of equal size is generous for Korea.**
+Added a limit: matched pairs in Korea would be built from city and county clusters, Seoul and Gyeonggi are hard to split, and regional sales need shipping addresses. Where pairs cannot be matched, the playbook's fallback is a user-level conversion lift study.
+

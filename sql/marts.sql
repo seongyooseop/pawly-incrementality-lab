@@ -117,3 +117,16 @@ SELECT CASE WHEN week <= 78 THEN 'weeks_1_78' ELSE 'weeks_79_104' END AS period,
 FROM obs
 GROUP BY period
 ORDER BY period;
+
+-- 6. GA4 revenue by channel group and period (data-driven attribution, own site only):
+--    the cross-platform view sets each channel's share of GA4 paid credit against its
+--    share of what ads added.
+CREATE OR REPLACE TABLE ga4_channels AS
+SELECT
+    CASE WHEN week <= 78 THEN 'weeks_1_78' ELSE 'weeks_79_104' END AS period,
+    channel,
+    channel_group,
+    SUM(ga4_revenue) AS ga4_revenue
+FROM ga4
+GROUP BY period, channel, channel_group
+ORDER BY period, channel;

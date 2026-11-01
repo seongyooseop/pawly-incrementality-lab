@@ -49,9 +49,15 @@ MODELS = {  # name: (calibrate, fitted weeks, seed)
     "all_weeks": (False, 104, 11),
     # out-of-sample check: the all-weeks model refitted without its last 12 weeks
     "holdout": (False, 92, 31),
+    # the same check after a refit that includes 4 weeks after the auto-bidding switch
+    "refit_after_switch": (False, 100, 41),
+    # ...and with a level-shift term from the known switch week
+    "refit_with_break": (False, 100, 43),
 }
+BREAKS = {"refit_with_break": 97}   # model name: first week of a known structural change
 PLANNING_MODELS = ["before_tests", "after_tests", "all_weeks"]
 HOLDOUT_FROM = 93
+REFIT_FROM = 101
 
 
 def calibration_targets():
@@ -76,7 +82,7 @@ def counterfactual_video(df, target):
     return x, m
 
 
-def fit(df, calibrate: bool, n_fit: int, targets: dict, seed: int):
+def fit(df, calibrate: bool, n_fit: int, targets: dict, seed: int, break_week: int | None = None):
     """Revenue likelihood on the first n_fit weeks; spend paths run through
     week 104 so experiment weeks can be scored even when not fitted."""
     y = df.revenue.to_numpy()[:n_fit]
@@ -111,6 +117,9 @@ def fit(df, calibrate: bool, n_fit: int, targets: dict, seed: int):
         pm.Deterministic("K", pt.stack(Ks), dims="channel")
         media = pt.stack(contrib, axis=1)
         mu = c0 + c1 * df.category.to_numpy() + c2 * tidx + media.sum(axis=1)
+        if break_week is not None:
+            shift = pm.Normal("shift", 0.0, 30.0)
+            mu = mu + shift * (df.week.to_numpy() >= break_week)
         pm.Deterministic("mu", mu)
         pm.Normal("y", mu[:n_fit], sigma, observed=y)
 
@@ -132,11 +141,13 @@ def fit(df, calibrate: bool, n_fit: int, targets: dict, seed: int):
 def summarize_fit(idata) -> dict:
     """Everything later steps need, as plain arrays (cached to models/)."""
     post = idata.posterior.to_dataset().stack(s=("chain", "draw"))
-    summ = az.summary(idata, var_names=["roi", "lam", "kappa", "c0", "c1", "c2", "sigma"])
+    names = ["roi", "lam", "kappa", "c0", "c1", "c2", "sigma"] + (["shift"] if "shift" in post else [])
+    summ = az.summary(idata, var_names=names)
     out = {"roi": post["roi"].values.T, "lam": post["lam"].values.T,
            "K": post["K"].values.T, "beta": post["beta"].values.T,
            "mu": post["mu"].values.T,
            "sigma": post["sigma"].values,
+           **({"shift": post["shift"].values} if "shift" in post else {}),
            "max_rhat": np.array(float(summ["r_hat"].max())),
            "divergences": np.array(int(idata.sample_stats["diverging"].values.sum()))}
     for k in ("geo_test", "video_pause"):
@@ -150,7 +161,7 @@ def load_or_fit(df, name, targets, refit=False):
     if path.exists() and not refit:
         return dict(np.load(path))
     path.parent.mkdir(exist_ok=True)
-    d = summarize_fit(fit(df, calibrate, n_fit, targets, seed))
+    d = summarize_fit(fit(df, calibrate, n_fit, targets, seed, BREAKS.get(name)))
     np.savez_compressed(path, **d)
     return d
 
@@ -345,6 +356,20 @@ def main():
     test = df.week.to_numpy() >= HOLDOUT_FROM
     mean = pred.mean(axis=0)
     lo, hi = np.quantile(pred, 0.05, axis=0), np.quantile(pred, 0.95, axis=0)
+    def forecast(name, seed):
+        f = fits[name]
+        p = f["mu"] + np.random.default_rng(seed).normal(size=f["mu"].shape) * f["sigma"][:, None]
+        return p.mean(axis=0), np.quantile(p, 0.05, axis=0), np.quantile(p, 0.95, axis=0)
+
+    def scores(fc, mask):
+        m, l, u = fc
+        return {"mape_pct": round(float(100 * np.mean(np.abs(y_all[mask] - m[mask]) / y_all[mask])), 2),
+                "coverage90": round(float(np.mean((y_all[mask] >= l[mask]) & (y_all[mask] <= u[mask]))), 2),
+                "mean_error_pct": round(float(100 * np.mean((y_all[mask] - m[mask]) / y_all[mask])), 2)}
+
+    last4 = df.week.to_numpy() >= REFIT_FROM
+    refit_fc = forecast("refit_after_switch", 6)
+    break_fc = forecast("refit_with_break", 7)
     out["model_check"] = {
         "convergence": {n: {"fitted_weeks": MODELS[n][1], "calibrated": MODELS[n][0],
                             "max_rhat": round(float(fits[n]["max_rhat"]), 3),
@@ -360,6 +385,16 @@ def main():
             "coverage90_out_of_sample": round(float(np.mean((y_all[test] >= lo[test]) & (y_all[test] <= hi[test]))), 2),
             "series": {"week": df.week.tolist(), "actual": y_all.round(1).tolist(), "mean": mean.round(1).tolist(),
                        "lo": lo.round(1).tolist(), "hi": hi.round(1).tolist()},
+        },
+        # does refitting after the structural change fix the forecast? same 4 test weeks for both
+        "refit": {
+            "tested_on_weeks": [REFIT_FROM, 104],
+            "fitted_through_92": scores((mean, lo, hi), last4),
+            "refitted_through_100": scores(refit_fc, last4),
+            "refitted_with_break_term": scores(break_fc, last4),
+            "break_shift_krw_m_per_week": [round(float(np.quantile(fits["refit_with_break"]["shift"], q)), 1) for q in (0.5, 0.05, 0.95)],
+            "series": {"mean": break_fc[0].round(1).tolist(), "lo": break_fc[1].round(1).tolist(),
+                       "hi": break_fc[2].round(1).tolist()},
         },
     }
     (ROOT / "outputs" / "ch4_mmm.json").write_text(json.dumps(out, indent=2))

@@ -52,8 +52,10 @@ in [`docs/advertiser_readout_ko.md`](docs/advertiser_readout_ko.md).
 4. **Budget.** A weekly Bayesian MMM fitted before the tests and again with both experiment results as calibration
    terms. A cross-platform view sets each platform's self-reported revenue against what it added: short video is the
    only channel credited with less than it adds; search and retargeting are credited 3-4 times their contribution.
+   The same check on the advertiser's GA4 data (data-driven attribution, own site only): GA4 sees 47% of sales and
+   gives search 63% of the paid credit against a 27% share of what ads added; short video gets 13% against 48%.
    Marginal ROI at today's budget, response curves, then reallocations run through the true world. A model check that
-   needs no truth: convergence, and a forecast for 12 weeks the model never saw.
+   needs no truth: convergence, a forecast for 12 weeks the model never saw, and whether a refit repairs it.
 5. **Advertiser readout.** Bottom line, confidence, next year's budget, what the returns mean in profit (the repeat
    buying each channel needs to pay back at an assumed margin), a quarterly learning agenda for 2027 (search holdout,
    total-budget step-down, retargeting audience holdout, recalibrated MMM with a brand lift survey), what the advertiser
@@ -72,12 +74,14 @@ in [`docs/advertiser_readout_ko.md`](docs/advertiser_readout_ko.md).
   calibrated model the two came out close (34% vs 36%).
 - **The MMM is too confident on weeks it has not seen.** Fitted on weeks 1-92, it forecasts weeks 93-104 within
   1.37% (0.66% in sample), but only 50% of those weeks fall inside its 90% range: after the auto-bidding switch it
-  under-predicts every week. Its ranges are a floor on the real uncertainty, and it needs a refit after a structural
-  change.
+  under-predicts every week. A plain refit through week 100 barely helps (1.52% error on weeks 101-104); a refit with
+  a level-shift term from the switch week fixes the forecast (0.27%, 4 of 4 weeks inside the range). The term is not
+  the switch's effect (8.1M a week vs a true 3.3M); that comes from chapter 3. Its ranges are a floor on the real
+  uncertainty.
 - **Social cannot be called.** The model puts social's return above what the platform reports; the truth puts it
   slightly below. Its interval contains the report, so the cross-platform view says "unclear" instead of guessing.
 
-Every problem the checks caught is in [`docs/ai_workflow_log.md`](docs/ai_workflow_log.md) (29 entries), including
+Every problem the checks caught is in [`docs/ai_workflow_log.md`](docs/ai_workflow_log.md) (32 entries), including
 an A/A test that showed the textbook TBR crying wolf 22% of the time.
 
 ## How the methods map to Google measurement tools
@@ -90,7 +94,7 @@ The study is written in plain method names. The closest Google tools:
 | Brand-search lift as a second KPI | Search Lift, Brand Lift |
 | Causal impact (Bayesian structural time series), with the posterior probability of an effect | CausalImpact (open source) |
 | Reported vs incremental under AI auto-bidding | Smart Bidding, Performance Max |
-| Cross-platform view: platform claims vs incremental revenue | Cross-platform analysis (GA4 data) |
+| Cross-platform view: platform claims and GA4 data-driven credit vs incremental revenue | Cross-platform analysis (GA4 data) |
 | Bayesian MMM with experiment calibration, response curves, out-of-sample check | Meridian (open source) |
 | Measurement readiness checklist | Conversion tracking, enhanced conversions, consent mode, offline conversion import |
 
@@ -101,13 +105,14 @@ python src/generate_history.py   # world check + the 78 weeks before any test
 python src/ch1_design.py         # pairing, A/A calibration, power, eligibility
 python src/ch0_playbook.py       # question -> study table
 python src/run_timeline.py       # all 104 weeks + counterfactual truth per chapter
+python src/ga4_export.py         # the advertiser's GA4 report (own site, data-driven attribution)
 python src/build_marts.py        # sql/marts.sql in DuckDB -> data/marts (national tables, pair diagnostic, platform claims)
 python src/ch1_readout.py        # geo test readout and pair diagnostic
 python src/ch1_montecarlo.py     # the same readout on 60 noise draws
 python src/ch2_causal_impact.py  # Bayesian structural time series (PyMC)
 python src/ch3_auto_bidding.py   # RDiT + placebo dates; budget increase
 python src/ch4_mmm.py            # MMM before/after tests, out-of-sample check, marginal ROI, response curves, plans (--refit to refit)
-python src/cross_platform.py     # platform claims vs incremental revenue
+python src/cross_platform.py     # platform claims and GA4 credit vs incremental revenue
 python src/validation.py         # every headline number vs truth
 python src/ch5_report.py         # advertiser readout (JSON + docs/advertiser_readout.md)
 python src/build_page.py         # site/index.html
@@ -140,8 +145,11 @@ docs/               work log and advertiser readout
   interval was fixed with historical A/A tests. Trimmed Match, the pair-level estimator that trims outlier pairs
   automatically, is the more robust choice when pairs differ a lot; here the pair diagnostic and an advertiser check do
   that trimming by hand.
-- The cross-platform view uses each platform's self-reported revenue. User-level paths, as in GA4 data-driven
-  attribution, are not simulated.
+- The GA4 export is simulated at channel level from stated rules (site share of sales, consent loss, how data-driven
+  credit differs from each platform's claim), not from user paths.
+- Korea has few usable geo units. Real matched pairs would come from city and county (si-gun-gu) clusters, with Seoul
+  and Gyeonggi hard to split, and regional sales need shipping addresses. Where pairs cannot be matched, the fallback
+  is a user-level conversion lift study.
 - The world is mine, so the methods were tested against problems I chose. The work log records where a method failed
   a check and what changed, including results that came out differently from the plan.
 - Built with Claude Code; every number on the page is produced by the scripts above.

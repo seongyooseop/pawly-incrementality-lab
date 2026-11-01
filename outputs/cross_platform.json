@@ -95,6 +95,75 @@
     "share_added_by_ads_pct": 15.2,
     "true_share_added_by_ads_pct": 14.3
   },
+  "ga4": {
+    "channels": [
+      {
+        "channel": "search",
+        "channel_group": "Paid Search",
+        "ga4_krw_m": 1742.3,
+        "ga4_roas": 1.32,
+        "ga4_share_pct": 63.2,
+        "incremental_share_pct": 26.8,
+        "incremental_share_ci90_pct": [
+          12.3,
+          41.9
+        ],
+        "true_share_pct": 33.8,
+        "verdict": "over-weighted in GA4",
+        "true_verdict": "over-weighted in GA4"
+      },
+      {
+        "channel": "short_video",
+        "channel_group": "Paid Video",
+        "ga4_krw_m": 361.6,
+        "ga4_roas": 0.26,
+        "ga4_share_pct": 13.1,
+        "incremental_share_pct": 48.1,
+        "incremental_share_ci90_pct": [
+          35.3,
+          62.8
+        ],
+        "true_share_pct": 47.1,
+        "verdict": "headroom",
+        "true_verdict": "headroom"
+      },
+      {
+        "channel": "social",
+        "channel_group": "Paid Social",
+        "ga4_krw_m": 331.7,
+        "ga4_roas": 0.51,
+        "ga4_share_pct": 12.0,
+        "incremental_share_pct": 17.5,
+        "incremental_share_ci90_pct": [
+          10.0,
+          27.3
+        ],
+        "true_share_pct": 14.3,
+        "verdict": "unclear",
+        "true_verdict": "headroom"
+      },
+      {
+        "channel": "retargeting",
+        "channel_group": "Display (retargeting)",
+        "ga4_krw_m": 322.8,
+        "ga4_roas": 0.74,
+        "ga4_share_pct": 11.7,
+        "incremental_share_pct": 5.7,
+        "incremental_share_ci90_pct": [
+          2.0,
+          14.9
+        ],
+        "true_share_pct": 4.8,
+        "verdict": "unclear",
+        "true_verdict": "over-weighted in GA4"
+      }
+    ],
+    "ga4_paid_krw_m": 2758.4,
+    "ga4_sees_pct_of_revenue": 46.7,
+    "ga4_paid_vs_added": 0.52,
+    "true_ga4_paid_vs_added": 0.55,
+    "note": "GA4 counts each website sale once, so its paid total stays below what ads added instead of above it: it misses marketplace orders and unconsented sessions. Within the mix its credit still follows clicks."
+  },
   "experiment_check": {
     "short_video_geo_test_iroas": 1.2,
     "short_video_geo_test_ci": [

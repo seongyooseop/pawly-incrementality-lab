@@ -71,6 +71,17 @@ REPORTED = {
     "auto_base_capture": 0.10,         # ...and returning visitors (7-day window)
 }
 
+# How GA4 on PAWLY's own site sees the same sales (read by ga4_export.py).
+# GA4 de-duplicates across channels, but it only sees the website, only
+# consented sessions, and its data-driven credit still follows clicks.
+GA4 = {
+    "site_share": 0.55,        # own-site share of revenue; marketplace orders are invisible to GA4
+    "observed_share": 0.85,    # site revenue GA4 records after consent choices and browser limits
+    # data-driven credit relative to each platform's own claim, once paths are de-duplicated:
+    # late touches share credit with earlier ones; engaged video views earn some credit
+    "dda_vs_claim": {"search": 0.80, "short_video": 1.80, "social": 0.85, "retargeting": 0.55},
+}
+
 
 def hill(x: np.ndarray, K: float, slope: float) -> np.ndarray:
     x = np.maximum(x, 0.0)

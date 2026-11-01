@@ -1,14 +1,15 @@
 """Run sql/marts.sql in DuckDB and write each mart to data/marts/<name>.parquet.
 
-Inputs: data/observed_daily.parquet (geo-day) and data/geo_assignment.csv.
-Run after run_timeline.py; chapters 1-4 read the marts.
+Inputs: data/observed_daily.parquet (geo-day), data/geo_assignment.csv and the
+GA4 export data/ga4_channel_week.parquet.
+Run after run_timeline.py and ga4_export.py; chapters 1-4 read the marts.
 """
 from pathlib import Path
 
 import duckdb
 
 ROOT = Path(__file__).resolve().parents[1]
-MARTS = ["national_day", "national_week", "geo_test_pairs", "platform_claims", "period_revenue"]
+MARTS = ["national_day", "national_week", "geo_test_pairs", "platform_claims", "period_revenue", "ga4_channels"]
 
 
 def main():
@@ -16,6 +17,7 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     con = duckdb.connect()
     con.execute(f"CREATE VIEW obs AS SELECT * FROM read_parquet('{(ROOT / 'data' / 'observed_daily.parquet').as_posix()}')")
+    con.execute(f"CREATE VIEW ga4 AS SELECT * FROM read_parquet('{(ROOT / 'data' / 'ga4_channel_week.parquet').as_posix()}')")
     con.execute(f"CREATE VIEW asg AS SELECT * FROM read_csv_auto('{(ROOT / 'data' / 'geo_assignment.csv').as_posix()}')")
     con.execute((ROOT / "sql" / "marts.sql").read_text(encoding="utf-8"))
     for name in MARTS:

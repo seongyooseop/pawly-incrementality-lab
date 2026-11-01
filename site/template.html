@@ -262,6 +262,11 @@ footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--gri
       <div class="tiles" id="xp-tiles"></div>
       <div class="tbl"><table id="xp-table"></table></div>
       <p class="note" id="xp-note"></p>
+      <h3 style="margin-top:18px">The same question with the advertiser's GA4 data</h3>
+      <p class="small">GA4 data-driven attribution on the own site, weeks 1-78. GA4 counts each website sale once, so the question becomes each channel's share of the paid credit against its share of what ads added.</p>
+      <div class="tiles" id="ga4-tiles"></div>
+      <div class="tbl"><table id="ga4-table"></table></div>
+      <p class="note" id="ga4-note"></p>
     </div>
     <div class="two">
       <div class="panel">
@@ -299,6 +304,9 @@ footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--gri
       <p class="note" id="mchk-note"></p>
       <div class="tbl"><table id="mchk-conv"></table></div>
       <div class="tbl"><table id="mchk-exp"></table></div>
+      <h3 style="margin-top:14px">Does a refit fix it? The same 4 weeks (101-104), three models</h3>
+      <div class="tbl"><table id="mchk-refit"></table></div>
+      <p class="note" id="mchk-refit-note"></p>
       <details class="data"><summary>Chart: weekly revenue vs the out-of-sample forecast</summary>
         <div class="legend" style="margin-top:6px"><span><span class="sw" style="background:var(--ink)"></span>Actual</span>
           <span><span class="sw" style="background:var(--est)"></span>Model fitted on weeks 1-92</span>
@@ -322,7 +330,8 @@ footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--gri
         <li><b>One simulated world.</b> The geo test was re-run on 60 noise draws; the other chapters were checked with placebo windows, not repeated worlds.</li>
         <li><b>The control series is cleaner than real ones.</b> The category-search index that drives the causal-impact model follows true demand with 5% noise. Real covariates (search trends, competitor sales) are noisier and can be touched by the campaign, which widens intervals and can bias them.</li>
         <li><b>TBR with A/A calibration instead of Trimmed Match.</b> TBR reads the go-dark test from group totals, as in GeoX; its interval was fixed with historical A/A tests. Trimmed Match, the pair-level estimator that trims outlier pairs automatically, would be the more robust choice when pairs differ a lot; here the pair diagnostic and an advertiser check do that trimming by hand.</li>
-        <li><b>No user-level paths.</b> The cross-platform view uses each platform's self-reported revenue; GA4-style data-driven attribution paths are not simulated.</li>
+        <li><b>GA4 is simulated at channel level, not from user paths.</b> The GA4 export follows stated rules (site share of sales, consent loss, how data-driven credit differs from each platform's claim); real GA4 paths would spread credit less evenly.</li>
+        <li><b>Korea has few usable geo units.</b> 40 regions of comparable size is generous: matched pairs in Korea would be built from city and county clusters (si-gun-gu), with Seoul and Gyeonggi hard to split, and sales by region need shipping addresses. Where pairs cannot be matched, the playbook's fallback is a user-level conversion lift study.</li>
         <li><b>The world is mine.</b> The methods were tested against problems I chose; the log below records where they failed a check, including results that came out differently from the plan.</li>
       </ul></div>
     <div class="panel"><h2>Problems the checks caught, and the fixes</h2>
@@ -653,6 +662,19 @@ try { const saved = localStorage.getItem("pawly-tab"); if (saved) document.query
     + (under.length ? `Only ${under.join(" and ")} is credited with less than it adds: that is where the headroom is. ` : "")
     + (unclear.length ? `For ${unclear.join(" and ")} the report sits inside the model's range, so no call is made. ` : "")
     + `Ranking channels by their own reported ROAS would put money in the wrong places. ${X.experiment_check.note}`;
+  const G = X.ga4;
+  tiles("ga4-tiles", [
+    { cls: "", k: "Share of sales GA4 sees", v: `${fmt(G.ga4_sees_pct_of_revenue, 0)}%`, s: "own site, consented sessions; no marketplace orders" },
+    { cls: "naive", k: "Revenue GA4 credits to paid channels", v: krw(G.ga4_paid_krw_m), s: `${fmt(G.ga4_paid_vs_added, 2)}× what ads added (truth ${fmt(G.true_ga4_paid_vs_added, 2)}×)` },
+  ]);
+  const GV = { headroom: "Headroom: GA4 under-shares it", "over-weighted in GA4": "Over-weighted in GA4", unclear: "Unclear: inside the model's range" };
+  table("ga4-table", ["Channel", "GA4 group", "GA4 revenue, M", "GA4 ROAS", "Share of GA4 paid credit", "Share of what ads added (90%)", "True share", "Verdict", "Truth says"],
+    G.channels.map((r) => [CH[r.channel], r.channel_group, fmt(r.ga4_krw_m, 0), fmt(r.ga4_roas, 2), `${fmt(r.ga4_share_pct, 1)}%`,
+      `${fmt(r.incremental_share_pct, 1)}% (${fmt(r.incremental_share_ci90_pct[0], 0)}-${fmt(r.incremental_share_ci90_pct[1], 0)}%)`,
+      `${fmt(r.true_share_pct, 1)}%`, GV[r.verdict], r.true_verdict]), [2, 3, 4, 6]);
+  const gv = (v) => G.channels.filter((r) => r.verdict === v).map((r) => CH[r.channel].toLowerCase());
+  $("ga4-note").textContent = `${G.note} GA4 gives ${gv("over-weighted in GA4").join(" and ")} more of the credit than its share of what ads added, and ${gv("headroom").join(" and ")} less: `
+    + `the same headroom the platform reports point to, now from data the advertiser owns. Scaling GA4 up to total sales would keep its click-based mix, so budget shares come from the model and the experiments; GA4 then tracks, week by week, whether the moves show up on the site.`;
 
   const MR = c.marginal_roi;
   table("mroi", ["Channel", "Before tests (90%)", "After tests, calibrated (90%)", "All 104 weeks (90%)", "Truth"],
@@ -724,15 +746,25 @@ try { const saved = localStorage.getItem("pawly-tab"); if (saved) document.query
     { cls: "est", k: "Out-of-sample error, weeks 93-104", v: `${fmt(H.out_of_sample_mape_pct, 2)}%`, s: "forecast for 12 weeks the model never saw" },
     { cls: "naive", k: "Out-of-sample weeks inside the 90% range", v: `${fmt(H.coverage90_out_of_sample * 100, 0)}%`, s: "should be about 90%" },
   ]);
-  $("mchk-note").textContent = `The forecast error stays small, but the model's ranges are too confident on weeks it has not seen: it overshoots the week video returns (93) and, from the auto-bidding switch in week 97, under-predicts every week by 1-2%, a change in how search is bought that the training weeks never contained. In-sample fit looks almost perfect partly because the category-search control follows true demand closely. Lessons: refit after a structural change, read the model's ranges as a floor on the real uncertainty, and lean on experiments for the decisions that matter.`;
+  $("mchk-note").textContent = `The forecast error stays small, but the model's ranges are too confident on weeks it has not seen: it overshoots the week video returns (93) and, from the auto-bidding switch in week 97, under-predicts every week by 1-2%, a change in how search is bought that the training weeks never contained. In-sample fit looks almost perfect partly because the category-search control follows true demand closely. Lessons: after a structural change, refit with a term for it (below), read the model's ranges as a floor on the real uncertainty, and lean on experiments for the decisions that matter.`;
   table("mchk-conv", ["Model", "Weeks fitted", "Calibrated", "Max R-hat", "Divergences", "In-sample error"],
-    Object.entries(MC.convergence).map(([n, v]) => [{ before_tests: "Before tests", after_tests: "After tests (calibrated)", all_weeks: "All weeks", holdout: "Out-of-sample check" }[n] || n,
+    Object.entries(MC.convergence).map(([n, v]) => [{ before_tests: "Before tests", after_tests: "After tests (calibrated)", all_weeks: "All weeks", holdout: "Out-of-sample check",
+      refit_after_switch: "Refit through week 100", refit_with_break: "Refit + switch term" }[n] || n,
       v.fitted_weeks, v.calibrated ? "yes" : "no", fmt(v.max_rhat, 3), v.divergences, `${fmt(v.in_sample_mape_pct, 2)}%`]), [1, 3, 4, 5]);
   table("mchk-exp", ["Model", "Geo-test loss, model (90%)", "Geo test measured", "Pause loss, model (90%)", "Pause, causal impact"],
     Object.entries(c.models).map(([n, m]) => { const g = m.experiment_lift_check_krw_m.geo_test, p = m.experiment_lift_check_krw_m.video_pause;
       return [{ before_tests: "Before tests", after_tests: "After tests (calibrated)", all_weeks: "All weeks" }[n],
         `${fmt(g.model, 1)}M (${fmt(g.model_ci90[0], 0)}-${fmt(g.model_ci90[1], 0)})`, `${fmt(g.experiment, 1)}M`,
         `${fmt(p.model, 1)}M (${fmt(p.model_ci90[0], 0)}-${fmt(p.model_ci90[1], 0)})`, `${fmt(p.experiment, 1)}M`]; }), [2, 4]);
+  const RF = MC.refit;
+  table("mchk-refit", ["Model", "Error", "Average miss (+ = too low)", "Weeks inside the 90% range"],
+    [["Fitted on weeks 1-92", RF.fitted_through_92], ["Refitted on weeks 1-100", RF.refitted_through_100],
+     ["Refitted on weeks 1-100 with a level shift from week 97", RF.refitted_with_break_term]]
+      .map(([n, v]) => [n, `${fmt(v.mape_pct, 2)}%`, `${v.mean_error_pct > 0 ? "+" : ""}${fmt(v.mean_error_pct, 2)}%`, `${fmt(v.coverage90 * 4, 0)} of 4`]), [1, 2, 3]);
+  const sh = RF.break_shift_krw_m_per_week, trueWk = D.ch3.validation_against_truth.true_incremental_krw_m / 4;
+  $("mchk-refit-note").textContent = `Refitting with four post-switch weeks is not enough: one search curve for 100 weeks cannot bend for the last four, and the forecast stays ${fmt(RF.refitted_through_100.mean_error_pct, 1)}% too low. `
+    + `Adding a level-shift term from the known switch week brings the error to ${fmt(RF.refitted_with_break_term.mape_pct, 2)}% with all 4 weeks inside the range. `
+    + `The term repairs the forecast but does not measure the switch: it adds ${fmt(sh[0], 1)}M a week (90%: ${fmt(sh[1], 1)}-${fmt(sh[2], 1)}M) against a true ${fmt(trueWk, 1)}M, because it also soaks up what the model gets wrong about search. What the switch added comes from chapter 3's read on total sales, not from this term.`;
   (function holdoutChart() {
     const s = H.series, idx = s.week.map((w, i) => i).filter((i) => s.week[i] >= 60);
     const wk = idx.map((i) => s.week[i]), act = idx.map((i) => s.actual[i]), mu = idx.map((i) => s.mean[i]);
