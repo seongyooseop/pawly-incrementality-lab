@@ -40,13 +40,13 @@ That rise is short video coming back after the pause, not the switch. The regres
 Fitted on all 104 weeks, the uncalibrated model already got short video right (ROI 1.61 vs true 1.75): the geo test and the 4-week pause are themselves big swings in video spend, so the data contained natural experiments. The question an advertiser actually faces is different: the model built on the 78 weeks before any test, versus the same model calibrated with the test results. Restructured the chapter around that comparison (before_tests / after_tests), with all_weeks kept as a reference.
 
 **10. Calibration moved little, and the reason is worth showing.**
-Before any test, the model's predicted loss for the geo-test weeks was KRW 60.5M; the test measured 64.8M. The model already agreed with the experiment, so calibration narrowed the video interval (90%: 1.53-2.38 to 1.50-2.24) without moving it much. For the pause, the model predicted 129M against a measured 93.0M (truth 114.7M); calibration pulled it to 125M. (Figures as of the refit in entry 15.) A calibration term is only as strong as the experiment's interval.
+Before any test, the model's predicted loss for the geo-test weeks was KRW 60.5M; the test measured 64.8M. The model already agreed with the experiment, so calibration narrowed the video interval (90%: 1.53-2.38 to 1.50-2.24) without moving it much. For the pause, the model predicted 129M against a measured 94.0M (truth 114.7M); calibration pulled it to 125M. (Figures as of the refit in entry 29.) A calibration term is only as strong as the experiment's interval.
 
 **11. Trap 3 did not do what it was designed to do.**
 Video and search spend move together (weekly correlation 0.85). The plan was that an observational model would hand video's effect to search. It did not: search came out *under*-valued (ROI 1.03 vs true 1.28; the response curve is about 30% too flat) and became the least certain channel (90% interval 0.39-2.03). Kept the result as it is rather than tuning the world until the trap fires.
 
 **12. The expected-gain budget plan captured only a fraction of the possible gain.**
-Each model's plan was run through the real world. Maximizing the expected gain cut search to 0.81x, following the under-valued median: true gain KRW 12.6-13.3M, 27-28% of the best possible 47.1M (all_weeks model: 5%). The model's own 90% interval for that gain, -75M to +140M, already said the move was a coin flip. Added a risk-aware plan that maximizes mean - 0.84 sd (about the 20th percentile), so budget moves only where the model is confident: 31% of the best gain for the before-test model, 36% for the calibrated after-test model, 64% for the all-weeks model (figures as of the refit in entry 15). The next experiment should be on search, the channel whose uncertainty costs the most.
+Each model's plan was run through the real world. Maximizing the expected gain cut search to 0.81x, following the under-valued median: true gain KRW 12.6M for the before-test model, 27% of the best possible 47.1M (all_weeks model: 5%). The model's own 90% interval for that gain, -75M to +140M, already said the move was a coin flip. Added a risk-aware plan that maximizes mean - 0.84 sd (about the 20th percentile), so budget moves only where the model is confident: 31% of the best gain for the before-test model (average plan 27%), 64% for the all-weeks model (average plan 5%). For the calibrated after-test model the two came out close (34% vs 36%), so the risk-aware plan is not always ahead; its case is that it moves less money on weaker evidence (figures as of the refit in entry 29). The next experiment should be on search, the channel whose uncertainty costs the most.
 
 ## Day 4 — validation table, advertiser readout and page (2026-10-31)
 
@@ -56,9 +56,9 @@ Chapter 1 reported a brand-search effect, but the truth file only held revenue. 
 **14. The first readout contradicted itself.**
 It recommended trimming search by 12% while warning that cutting search would be a gamble. Rewrote the line to say what the plan actually does: a plan built on the model's average would cut search 27%; the risk-aware plan trims it 12% and leaves any bigger cut to the search test.
 
-## Day 5 — review against the two job postings (2026-11-01)
+## Day 5 — review against the job posting (2026-11-01)
 
-A review against the Google and TikTok postings found three gaps: no SQL (a minimum qualification), no cross-platform analysis (one of the four named solutions), and response curves without marginal returns.
+A review against the posting found three gaps: no SQL (a minimum qualification), no cross-platform analysis (one of the measurement solutions the role covers), and response curves without marginal returns.
 
 **15. Moved shared data preparation into SQL, and checked nothing changed.**
 National daily and weekly tables, the pair diagnostic (median and MAD in SQL) and the platform-claims table now come from sql/marts.sql in DuckDB. Every mart matched the earlier pandas results exactly, and chapters 1 and 3 reproduced byte for byte. Chapter 2 differed only by sampler noise when re-run (pause loss -93.6M to -93.0M, same interval and verdict); the calibrated MMM was refitted to the new figure so the chapters stay consistent.
@@ -91,3 +91,21 @@ Added a three-sentence Korean summary in plain words (no iROAS, no intervals) at
 
 **24. The readout had no answer to "what does this mean for the account?"**
 Added internal notes for the account team: the growth opportunity (short video +15%, about KRW 192M more a year, backed by an experiment), positioning the search holdout as "prove, then reinvest" rather than a cut, why a budget step-down test builds trust, the studies to propose next, and which parts are reusable for the next client.
+
+## Day 6 — what a measurement lead would still ask (2026-11-02)
+
+**25. Before any study, is the data good enough to measure?**
+Most measurement disputes with a small advertiser start with two numbers that disagree, not with a method. Added a readiness checklist to chapter 0: platform conversions reconcile with the advertiser's own orders, sales outside the website (marketplaces) are counted, daily sales by region exist for at least a year, conversion signals are complete enough after consent choices and app tracking limits, and the media plan and promotion calendar are shared. Each check says why it matters, how to do it, and where PAWLY stands.
+
+**26. The causal-impact read gave an interval but not the number an advertiser asks for.**
+"How sure are you the pause cost us sales?" Added CausalImpact's standard read-out, the posterior probability of a loss: 99.7% for the pause, against 64% and 80% for the two placebo windows, whose intervals contain zero. A placebo with a high probability but an interval across zero is the reason both are shown.
+
+**27. Was the measuring itself worth it?**
+The geo test cost about KRW 27M in sales net of the video budget withheld. Against that: a repeat of the summer pause would cost about KRW 94M, keeping the 30% search increase would have lost about KRW 264M a year, and the reallocation is expected to add about KRW 57M (90%: -16M to 113M). Added to the readout in sales terms, with the margin caveat.
+
+**28. The MMM had only been checked against the truth, which a real advertiser never has.**
+Added checks that work without a truth: convergence for every fit (max R-hat 1.008, no divergences), and an out-of-sample forecast from a model fitted on weeks 1-92 and tested on weeks 93-104. The forecast error is small (1.37% vs 0.66% in sample), but only 50% of the out-of-sample weeks fall inside the 90% range. The model overshoots the week video returns (93), and from the auto-bidding switch in week 97 it under-predicts every week by 1-2%: search was bought differently after the switch and the training weeks never saw it. The in-sample noise estimate is also too small, partly because the category-search control is cleaner than any real one. Shown as found: refit after a structural change, read the model's ranges as a floor on the uncertainty, and use experiments for the big decisions.
+
+**29. Re-running chapters 2 and 4 moved some figures slightly.**
+Adding the probability and the out-of-sample model meant re-running the samplers. The pause loss moved from 93.0M to 94.0M (95%: 30-161M); the calibrated model's plans moved to 36% (average) and 34% (risk-aware) of the best possible gain. Downstream chapters, the scorecard (still 11 of 11 inside their intervals) and the readout were rebuilt from the new fits so every page agrees.
+

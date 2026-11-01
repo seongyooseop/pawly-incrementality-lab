@@ -3,7 +3,7 @@
   "from": "Measurement team, with the account team",
   "period": "Nov 2024 - Oct 2026 (104 weeks)",
   "bottom_line": [
-    "Short-form video pays back in sales: about KRW 1.2 of extra sales per won during the test (range 0.6-1.8), and about 1.5 counting the two weeks after it, when part of the effect lands. The 4-week summer pause cost about KRW 93M in sales (range KRW 32M-KRW 164M), not the KRW 245M a before/after view suggests.",
+    "Short-form video pays back in sales: about KRW 1.2 of extra sales per won during the test (range 0.6-1.8), and about 1.5 counting the two weeks after it, when part of the effect lands. The 4-week summer pause cost about KRW 94M in sales (range KRW 30M-KRW 161M), not the KRW 245M a before/after view suggests.",
     "The jump in reported search revenue after switching to AI auto-bidding (+93%) is almost entirely sales that were already happening, now credited to search. Total sales did not move (-0.2%, range -2.0% to +1.6%).",
     "The 30% search budget increase that followed returned about KRW 0.15 per won (range -0.35 to 0.64): below break-even.",
     "Added up, the platforms claim 1.3 times the sales that ads actually added. Short video is the only channel credited with less than it adds. At today's spend, the next won returns less than a won in every channel (model: 0.3-0.8), so shift budget first and then test a smaller total.",
@@ -24,7 +24,7 @@
     {
       "question": "What did the summer pause cost?",
       "method": "Causal impact (Bayesian structural time series)",
-      "answer": "KRW 93M (KRW 32M-KRW 164M)",
+      "answer": "KRW 94M (KRW 30M-KRW 161M)",
       "confidence": "Medium: wide range, but consistent with the geo test"
     },
     {
@@ -117,6 +117,31 @@
       }
     ],
     "note": "Returns are in sales, from the 104-week model. A won of ad spend pays back when return x gross margin x lifetime multiple is at least 1. 'Lifetime multiple' = a new customer's total purchases divided by their first, which only PAWLY's own order data can tell. Margin of 40% is a placeholder."
+  },
+  "worth_it": {
+    "rows": [
+      {
+        "item": "Cost of the geo test (sales lost incl. cooldown, minus video budget withheld)",
+        "krw_m": 26.7,
+        "basis": "77.5M sales lost vs 50.8M not spent, 19 pairs"
+      },
+      {
+        "item": "Sales a repeat of the 4-week video pause would cost",
+        "krw_m": 94.0,
+        "basis": "Causal impact read of the summer pause; the geo test shows the loss is real"
+      },
+      {
+        "item": "Yearly loss if the 30% search increase had been kept",
+        "krw_m": 263.9,
+        "basis": "23.7M extra spend returned 3.4M sales per 4 weeks, x13"
+      },
+      {
+        "item": "Expected yearly gain from the reallocation",
+        "krw_m": 57.1,
+        "basis": "Model, 90%: -16 to 113M"
+      }
+    ],
+    "note": "The geo test cost about KRW 27M in sales. Each decision it and the follow-up reads support is worth several times that a year. In sales terms; profit depends on margin and repeat buying."
   },
   "not_sure": [
     "Search's return is the widest range in the model (90%: 0.4-1.7). A plan built on the model's average alone would cut search 27%; this plan trims it 12% and leaves any bigger cut to the search test.",

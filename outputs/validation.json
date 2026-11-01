@@ -28,10 +28,10 @@
       "chapter": 2,
       "quantity": "Revenue lost in the 4-week video pause, KRW M",
       "naive": "-244.7 (before/after)",
-      "estimate": -93.0,
+      "estimate": -94.0,
       "interval": [
-        -163.9,
-        -31.5
+        -161.0,
+        -30.5
       ],
       "truth": -114.7,
       "truth_inside": true
@@ -40,10 +40,10 @@
       "chapter": 2,
       "quantity": "Short video iROAS from the pause",
       "naive": "2.85 (before/after)",
-      "estimate": 1.08,
+      "estimate": 1.09,
       "interval": [
-        0.37,
-        1.91
+        0.35,
+        1.88
       ],
       "truth": 1.336,
       "truth_inside": true
@@ -76,10 +76,10 @@
       "chapter": 4,
       "quantity": "Search ROI, weeks 1-78 (calibrated MMM, 90%)",
       "naive": "3.41 (platform-reported ROAS)",
-      "estimate": 1.04,
+      "estimate": 1.08,
       "interval": [
-        0.39,
-        2.05
+        0.41,
+        2.06
       ],
       "truth": 1.28,
       "truth_inside": true
@@ -90,8 +90,8 @@
       "naive": "0.30 (platform-reported ROAS)",
       "estimate": 1.82,
       "interval": [
-        1.5,
-        2.24
+        1.49,
+        2.25
       ],
       "truth": 1.69,
       "truth_inside": true
@@ -100,10 +100,10 @@
       "chapter": 4,
       "quantity": "Social ROI, weeks 1-78 (calibrated MMM, 90%)",
       "naive": "1.24 (platform-reported ROAS)",
-      "estimate": 1.42,
+      "estimate": 1.44,
       "interval": [
-        0.75,
-        2.43
+        0.74,
+        2.44
       ],
       "truth": 1.1,
       "truth_inside": true
@@ -112,10 +112,10 @@
       "chapter": 4,
       "quantity": "Retargeting ROI, weeks 1-78 (calibrated MMM, 90%)",
       "naive": "2.77 (platform-reported ROAS)",
-      "estimate": 0.7,
+      "estimate": 0.68,
       "interval": [
-        0.23,
-        1.85
+        0.24,
+        1.88
       ],
       "truth": 0.55,
       "truth_inside": true
@@ -124,10 +124,10 @@
       "chapter": 4,
       "quantity": "Revenue added by all ads, weeks 1-78, KRW M (calibrated MMM, 90%)",
       "naive": "6,926 (sum of platform reports)",
-      "estimate": 5268.3,
+      "estimate": 5313.3,
       "interval": [
-        4078.4,
-        6853.5
+        4057.6,
+        6989.7
       ],
       "truth": 4990.2,
       "truth_inside": true
@@ -168,8 +168,8 @@
         "risk_aware": 0.31
       },
       "after_tests": {
-        "mean": 0.28,
-        "risk_aware": 0.36
+        "mean": 0.36,
+        "risk_aware": 0.34
       },
       "all_weeks": {
         "mean": 0.05,
@@ -184,9 +184,10 @@
             70,
             73
           ],
-          "effect_krw_m": -14.6,
+          "effect_krw_m": -13.3,
+          "p_negative": 0.638,
           "ci_krw_m": [
-            -95.3,
+            -95.9,
             61.0
           ],
           "contains_zero": true
@@ -196,10 +197,11 @@
             76,
             78
           ],
-          "effect_krw_m": -18.9,
+          "effect_krw_m": -18.7,
+          "p_negative": 0.797,
           "ci_krw_m": [
-            -65.6,
-            27.3
+            -68.3,
+            29.8
           ],
           "contains_zero": true
         }
@@ -211,7 +213,7 @@
       "ch2_max_rhat": 1.005,
       "ch2_divergences": 0,
       "ch4_before_tests_max_rhat": 1.006,
-      "ch4_after_tests_max_rhat": 1.007,
+      "ch4_after_tests_max_rhat": 1.008,
       "ch4_all_weeks_max_rhat": 1.006,
       "ch4_before_tests_divergences": 0,
       "ch4_after_tests_divergences": 0,
@@ -253,10 +255,10 @@
       {
         "source": "Pause, causal impact",
         "weeks": "89-92",
-        "estimate": 1.08,
+        "estimate": 1.09,
         "interval": [
-          0.37,
-          1.91
+          0.35,
+          1.88
         ],
         "truth": 1.336,
         "why": "No holdout, model-based; summer weeks at a lower budget"
@@ -266,8 +268,8 @@
         "weeks": "1-78",
         "estimate": 1.82,
         "interval": [
-          1.5,
-          2.24
+          1.49,
+          2.25
         ],
         "truth": 1.69,
         "why": "Average over 78 weeks at varying budgets, including carry-over"
@@ -289,7 +291,7 @@
       1.52
     ],
     "spread": [
-      1.08,
+      1.09,
       1.82
     ],
     "message": "Quote 1.2-1.5 from the experiment (6 weeks, and with the cooldown). Every causal read lands between 1.1 and 1.8, all above break-even on sales; they differ because they cover different weeks, budgets and carry-over, not because they disagree. The platform's 0.30 is the outlier."

@@ -64,5 +64,37 @@
       "output": "Lift in brand searches (or ad recall) with an interval",
       "watch_out": "Brand search ads can steal clicks from organic results; measure searches, not ad clicks"
     }
+  ],
+  "readiness": [
+    {
+      "check": "Platform conversions reconcile with the advertiser's own orders",
+      "why": "A study is only as good as its outcome data; most small-advertiser disputes start with two numbers that disagree",
+      "how": "Compare the same days on the same basis: attribution window, time zone, cancellations and returns, click vs view",
+      "pawly": "Own order system is the outcome for every study; platform reports are compared against it, never used as the outcome"
+    },
+    {
+      "check": "Sales outside the website are counted",
+      "why": "Ads drive marketplace and offline sales too; site-only data understates every return",
+      "how": "Daily totals from the order system across own site and marketplaces",
+      "pawly": "Revenue includes the own site and two marketplaces"
+    },
+    {
+      "check": "Daily sales by region exist for at least a year",
+      "why": "Geo tests and their power estimate need region-level history",
+      "how": "Region-by-day revenue; replay past weeks as fake tests before promising one",
+      "pawly": "40 regions x 78 weeks before the first test"
+    },
+    {
+      "check": "Conversion signals are complete enough",
+      "why": "Consent choices and app tracking limits hide part of the conversions, so click-based reports drift from reality",
+      "how": "Check how many conversions are observed vs modeled; lean on experiments and total-sales models where signals are thin",
+      "pawly": "Every chapter measures total sales, which consent loss does not touch"
+    },
+    {
+      "check": "The media plan and promotion calendar are shared",
+      "why": "Booked budgets are the denominator of every return; promotions inside a test region can fake an effect",
+      "how": "Booked budget per week, planned promotions by region, a promise to hold budgets flat during a test",
+      "pawly": "The cancelled budget came from the media plan; an unannounced retail promotion in G26 nearly inflated the geo read by a quarter"
+    }
   ]
 }

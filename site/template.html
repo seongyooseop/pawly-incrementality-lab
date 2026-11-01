@@ -142,6 +142,11 @@ footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--gri
       <p class="note">A decision table an account team can use before promising a study. Eligibility numbers come from PAWLY's own history.</p>
       <div class="tbl"><table id="playbook"></table></div>
     </div>
+    <div class="panel">
+      <h2>Before any study: is the data good enough to measure?</h2>
+      <p class="note">Most measurement problems at small advertisers start with data, not models. Five checks run before a study is promised.</p>
+      <div class="tbl"><table id="readiness"></table></div>
+    </div>
   </section>
 
   <!-- ================= Geo test ================= -->
@@ -213,7 +218,7 @@ footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--gri
     <div class="two">
       <div class="panel"><h3>Three answers to the same question</h3><div class="tiles" id="pause-tiles"></div></div>
       <div class="panel"><h3>Placebo checks: quiet past windows</h3><div class="tbl"><table id="placebo"></table></div>
-        <p class="note">A model that finds effects where nothing happened cannot be trusted where something did. Both ranges contain zero.</p></div>
+        <p class="note">A model that finds effects where nothing happened cannot be trusted where something did. Both ranges contain zero, and neither probability comes near the real pause's.</p></div>
     </div>
   </section>
 
@@ -286,6 +291,20 @@ footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--gri
       <h3>Budget plans, run through the true world</h3>
       <div class="tbl"><table id="plans"></table></div>
       <p class="note" id="plans-note"></p>
+    </div>
+    <div class="panel">
+      <h3>Model check: can the model be trusted beyond the truth we know?</h3>
+      <p class="small">Checks that also work on a real advertiser, where no truth is available: convergence, fit, an out-of-sample forecast, and agreement with the experiments.</p>
+      <div class="tiles" id="mchk-tiles"></div>
+      <p class="note" id="mchk-note"></p>
+      <div class="tbl"><table id="mchk-conv"></table></div>
+      <div class="tbl"><table id="mchk-exp"></table></div>
+      <details class="data"><summary>Chart: weekly revenue vs the out-of-sample forecast</summary>
+        <div class="legend" style="margin-top:6px"><span><span class="sw" style="background:var(--ink)"></span>Actual</span>
+          <span><span class="sw" style="background:var(--est)"></span>Model fitted on weeks 1-92</span>
+          <span><span class="sw box" style="background:var(--est-band)"></span>90% predictive range</span></div>
+        <svg class="chart" id="holdout-chart" style="max-width:560px" viewBox="0 0 560 280" role="img" aria-label="Weekly revenue against the out-of-sample forecast"></svg>
+      </details>
     </div>
   </section>
 
@@ -427,6 +446,8 @@ try { const saved = localStorage.getItem("pawly-tab"); if (saved) document.query
   table("tri", ["Source", "Weeks", "Return per won", "Interval", "Truth, same weeks", "Why it differs"],
     T.rows.map((r, i) => ({ hl: i === 1 || i === 2, cells: [r.source, r.weeks, fmt(r.estimate, 2), r.interval ? range(r.interval) : "–",
       r.truth == null ? "–" : fmt(r.truth, 2), r.why] })), [2, 4]);
+  table("readiness", ["Check", "Why it matters", "How", "In PAWLY"],
+    D.playbook.readiness.map((r) => [`<b>${r.check}</b>`, r.why, r.how, r.pawly]));
   table("playbook", ["Question", "Study", "Use when", "Eligibility", "Watch out for"],
     D.playbook.rows.map((r) => [`<b>${r.question}</b>`, `${r.method}<br><span class="small">Chapter ${r.chapter}</span>`, r.use_when, r.eligibility, r.watch_out]));
 })();
@@ -466,7 +487,8 @@ try { const saved = localStorage.getItem("pawly-tab"); if (saved) document.query
   const six = des.eligibility.find((e) => e.weeks === 6);
   $("aa-note").innerHTML = `*If the true iROAS is 0.5-2.0. A/A tests (past windows with nothing injected): the standard interval cried wolf in
     ${fmt(six.aa_false_positive_uncalibrated * 100, 0)}% of 6-week windows; after calibration, ${fmt(six.aa_false_positive_holdout * 100, 1)}% on held-out windows (target 5%).
-    Eligibility rule: at least KRW ${fmt(six.min_national_video_budget_for_iroas1_m_per_day, 2)}M/day of national video for 6 weeks.`;
+    Eligibility rule: at least KRW ${fmt(six.min_national_video_budget_for_iroas1_m_per_day, 2)}M/day of national video for 6 weeks.
+    Pre-period fit of the chosen split (last 12 weeks): daily error ${fmt(des.prefit_last_12_weeks.mape * 100, 1)}%, correlation ${fmt(des.prefit_last_12_weeks.corr, 2)}.`;
 
   // design options
   const opts = des.design_options;
@@ -522,6 +544,7 @@ try { const saved = localStorage.getItem("pawly-tab"); if (saved) document.query
   const c = D.ch2, ci = c.causal_impact, v = c.validation_against_truth, s = c.series;
   $("pause-q").textContent = c.question;
   $("pause-answer").innerHTML = `About ${krw(-ci.effect_krw_m)} of sales (95%: ${krw(-ci.ci_krw_m[1])} to ${krw(-ci.ci_krw_m[0])}), an iROAS of <b>${fmt(ci.iroas, 2)}</b> on the cancelled budget.
+    Posterior probability that the pause cost sales: <b>${fmt(ci.probability_of_loss * 100, 1)}%</b> (model converged: max R-hat ${fmt(ci.max_rhat, 3)}, ${ci.divergences} divergences).
     A before/after comparison says ${krw(-c.naive_before_after.effect_krw_m)}, because the pause fell in the summer dip. Truth: ${krw(-v.true_effect_krw_m)}.`;
   const svg = $("ci-chart"), n = s.date.length, xs = [...Array(n).keys()];
   const div = (a) => a.map((x) => x / 1e6);
@@ -550,8 +573,9 @@ try { const saved = localStorage.getItem("pawly-tab"); if (saved) document.query
     { cls: "est", k: "Causal impact", v: krw(ci.effect_krw_m), s: `95%: ${fmt(ci.ci_krw_m[0], 0)} to ${fmt(ci.ci_krw_m[1], 0)}M · iROAS ${fmt(ci.iroas, 2)}` },
     { cls: "truth", k: "Truth", v: krw(v.true_effect_krw_m), s: `iROAS ${fmt(v.true_iroas, 2)}` },
   ]);
-  table("placebo", ["Fake pause (weeks)", "Effect found", "95% range", "Contains zero"],
-    c.placebo_checks.map((p) => [`${p.post_weeks[0]}-${p.post_weeks[1]}`, krw(p.effect_krw_m), `${fmt(p.ci_krw_m[0], 0)} to ${fmt(p.ci_krw_m[1], 0)}M`, p.contains_zero ? '<span class="ok">✓ yes</span>' : '<span class="miss">✕ no</span>']), [1]);
+  table("placebo", ["Fake pause (weeks)", "Effect found", "95% range", "Probability of a loss", "Contains zero"],
+    c.placebo_checks.map((p) => [`${p.post_weeks[0]}-${p.post_weeks[1]}`, krw(p.effect_krw_m), `${fmt(p.ci_krw_m[0], 0)} to ${fmt(p.ci_krw_m[1], 0)}M`,
+      `${fmt(p.p_negative * 100, 0)}%`, p.contains_zero ? '<span class="ok">✓ yes</span>' : '<span class="miss">✕ no</span>']), [1, 3]);
 })();
 
 // ------------------------------------------------------------ auto-bidding
@@ -657,8 +681,9 @@ try { const saved = localStorage.getItem("pawly-tab"); if (saved) document.query
     const hit = el("rect", { x: fr.m.l, width: fr.W - fr.m.l - fr.m.r, y: yc - 22, height: 44, fill: "transparent" }, svg);
     hover(hit, `<b>${CH[ch]}</b><br>Before tests: ${fmt(B.roi[ch].median, 2)} (${range(B.roi[ch].ci90)})<br>After tests: ${fmt(A.roi[ch].median, 2)} (${range(A.roi[ch].ci90)})<br>Truth: ${fmt(A.roi[ch].truth, 2)}<br>Platform-reported: ${fmt(naive[ch], 2)}`);
   });
-  table("roi-table", ["Channel", "Before tests (90%)", "After tests (90%)", "Truth", "Platform-reported"],
-    chs.map((ch) => [CH[ch], `${fmt(B.roi[ch].median, 2)} (${range(B.roi[ch].ci90)})`, `${fmt(A.roi[ch].median, 2)} (${range(A.roi[ch].ci90)})`, fmt(A.roi[ch].truth, 2), fmt(naive[ch], 2)]), [3, 4]);
+  table("roi-table", ["Channel", "Before tests (90%)", "After tests (90%)", "Chance return > 1 (after tests)", "Truth", "Platform-reported"],
+    chs.map((ch) => [CH[ch], `${fmt(B.roi[ch].median, 2)} (${range(B.roi[ch].ci90)})`, `${fmt(A.roi[ch].median, 2)} (${range(A.roi[ch].ci90)})`,
+      `${fmt(A.roi[ch].p_above_1 * 100, 0)}%`, fmt(A.roi[ch].truth, 2), fmt(naive[ch], 2)]), [3, 4, 5]);
 
   // response curves
   const seg = $("curve-seg"), M = c.true_response_curves.multipliers;
@@ -689,7 +714,38 @@ try { const saved = localStorage.getItem("pawly-tab"); if (saved) document.query
   }
   rows.push({ cells: ["Best possible (truth)", "–", ...chs.map((ch) => `${fmt(c.true_best_plan.multipliers[ch], 2)}×`), "–", fmt(c.true_best_plan.true_gain_krw_m, 1), "100%"] });
   table("plans", ["Model", "Plan", ...chs.map((ch) => CH[ch]), "Model's predicted gain, M (90%)", "True gain, M", "Of best"], rows, [2, 3, 4, 5, 6, 7, 8]);
-  $("plans-note").textContent = "Search is the least certain channel, and the models under-value it. Plans that follow the average cut search hard and lose most of the possible gain; risk-aware plans move less and keep more. The next experiment should be on search.";
+  const wins = Object.values(c.models).filter((m) => m.plans.risk_aware.true_gain_krw_m >= m.plans.mean.true_gain_krw_m).length;
+  $("plans-note").textContent = `Search is the least certain channel, and the models under-value it. Plans that follow the average cut search hard; the risk-aware plan earned more in ${wins} of 3 models, and by far the most where the average plan nearly failed (all weeks: ${fmt(W.plans.risk_aware.share_of_best_possible * 100, 0)}% vs ${fmt(W.plans.mean.share_of_best_possible * 100, 0)}%). Where the two came out close, the risk-aware plan still moved less money on weaker evidence. The next experiment should be on search.`;
+
+  // model check
+  const MC = c.model_check, H = MC.holdout;
+  tiles("mchk-tiles", [
+    { cls: "est", k: "In-sample error, weeks 1-92", v: `${fmt(H.in_sample_mape_pct, 2)}%`, s: "mean absolute % error, weekly revenue" },
+    { cls: "est", k: "Out-of-sample error, weeks 93-104", v: `${fmt(H.out_of_sample_mape_pct, 2)}%`, s: "forecast for 12 weeks the model never saw" },
+    { cls: "naive", k: "Out-of-sample weeks inside the 90% range", v: `${fmt(H.coverage90_out_of_sample * 100, 0)}%`, s: "should be about 90%" },
+  ]);
+  $("mchk-note").textContent = `The forecast error stays small, but the model's ranges are too confident on weeks it has not seen: it overshoots the week video returns (93) and, from the auto-bidding switch in week 97, under-predicts every week by 1-2%, a change in how search is bought that the training weeks never contained. In-sample fit looks almost perfect partly because the category-search control follows true demand closely. Lessons: refit after a structural change, read the model's ranges as a floor on the real uncertainty, and lean on experiments for the decisions that matter.`;
+  table("mchk-conv", ["Model", "Weeks fitted", "Calibrated", "Max R-hat", "Divergences", "In-sample error"],
+    Object.entries(MC.convergence).map(([n, v]) => [{ before_tests: "Before tests", after_tests: "After tests (calibrated)", all_weeks: "All weeks", holdout: "Out-of-sample check" }[n] || n,
+      v.fitted_weeks, v.calibrated ? "yes" : "no", fmt(v.max_rhat, 3), v.divergences, `${fmt(v.in_sample_mape_pct, 2)}%`]), [1, 3, 4, 5]);
+  table("mchk-exp", ["Model", "Geo-test loss, model (90%)", "Geo test measured", "Pause loss, model (90%)", "Pause, causal impact"],
+    Object.entries(c.models).map(([n, m]) => { const g = m.experiment_lift_check_krw_m.geo_test, p = m.experiment_lift_check_krw_m.video_pause;
+      return [{ before_tests: "Before tests", after_tests: "After tests (calibrated)", all_weeks: "All weeks" }[n],
+        `${fmt(g.model, 1)}M (${fmt(g.model_ci90[0], 0)}-${fmt(g.model_ci90[1], 0)})`, `${fmt(g.experiment, 1)}M`,
+        `${fmt(p.model, 1)}M (${fmt(p.model_ci90[0], 0)}-${fmt(p.model_ci90[1], 0)})`, `${fmt(p.experiment, 1)}M`]; }), [2, 4]);
+  (function holdoutChart() {
+    const s = H.series, idx = s.week.map((w, i) => i).filter((i) => s.week[i] >= 60);
+    const wk = idx.map((i) => s.week[i]), act = idx.map((i) => s.actual[i]), mu = idx.map((i) => s.mean[i]);
+    const lo = idx.map((i) => s.lo[i]), hi = idx.map((i) => s.hi[i]);
+    const svgH = $("holdout-chart");
+    const fr = frame(svgH, { xd: [wk[0], wk[wk.length - 1]], yd: [Math.min(...act, ...lo) * 0.97, Math.max(...act, ...hi) * 1.02], xfmt: (t) => `w${t}`, yfmt: (t) => fmt(t, 0), ylab: "KRW million per week" });
+    el("rect", { x: fr.x(H.tested_on_weeks[0] - 0.5), width: fr.x(104) - fr.x(H.tested_on_weeks[0] - 0.5), y: fr.m.t, height: fr.H - fr.m.t - fr.m.b, fill: "var(--shade)" }, svgH);
+    el("text", { x: fr.x(98.5), y: fr.m.t + 12, "text-anchor": "middle", class: "lab" }, svgH, "not used to fit");
+    el("path", { d: band(wk, lo, hi, fr.x, fr.y), fill: "var(--est-band)" }, svgH);
+    el("path", { d: path(wk, mu, fr.x, fr.y), fill: "none", stroke: "var(--est)", "stroke-width": 2 }, svgH);
+    el("path", { d: path(wk, act, fr.x, fr.y), fill: "none", stroke: "var(--ink)", "stroke-width": 1.5 }, svgH);
+    crosshair(svgH, fr, wk, (i) => `<b>Week ${wk[i]}</b><br>Actual ${fmt(act[i], 1)}M<br>Model ${fmt(mu[i], 1)}M (${fmt(lo[i], 1)}-${fmt(hi[i], 1)})`);
+  })();
 })();
 
 // ------------------------------------------------------------ readout memo
@@ -710,6 +766,9 @@ try { const saved = localStorage.getItem("pawly-tab"); if (saved) document.query
     <section><h3>Does it pay? Sales returns in profit terms</h3><div class="tbl"><table><thead><tr><th>Channel</th><th>Sales per won (average)</th><th>Sales per next won</th><th>Lifetime multiple needed (average)</th><th>Lifetime multiple needed (next won)</th></tr></thead><tbody>
       ${r.profit.rows.map((p) => `<tr><td>${p.channel}</td><td class="n">${fmt(p.average_return, 2)}</td><td class="n">${fmt(p.next_won_return, 2)}</td><td class="n">${fmt(p.lifetime_multiple_needed_average, 1)}×</td><td class="n">${fmt(p.lifetime_multiple_needed_next_won, 1)}×</td></tr>`).join("")}</tbody></table></div>
       <p class="note" style="margin-top:6px">${r.profit.note}</p></section>
+    <section><h3>Was measuring worth it?</h3><div class="tbl"><table><thead><tr><th>Item</th><th>KRW M</th><th>Basis</th></tr></thead><tbody>
+      ${r.worth_it.rows.map((w) => `<tr><td>${w.item}</td><td class="n">${fmt(w.krw_m, 1)}</td><td>${w.basis}</td></tr>`).join("")}</tbody></table></div>
+      <p class="note" style="margin-top:6px">${r.worth_it.note}</p></section>
     <section><h3>What we are not sure about</h3><ul>${r.not_sure.map((x) => `<li>${x}</li>`).join("")}</ul></section>
     <section><h3>Next test</h3><p><b>${r.next_test.what}.</b> ${r.next_test.why}. ${r.next_test.eligibility}.</p></section>
     <section><h3>Learning agenda for 2027</h3><div class="tbl"><table><thead><tr><th>Quarter</th><th>Question</th><th>Study</th><th>Decides</th><th>Why now</th></tr></thead><tbody>
@@ -731,6 +790,8 @@ try { const saved = localStorage.getItem("pawly-tab"); if (saved) document.query
     { cls: "est", k: "Interval coverage over 60 luck draws", v: `${fmt(C.monte_carlo_60_draws.without_contaminated_pair.ci_coverage * 100, 0)}%`, s: "geo test, after the check" },
     { cls: "est", k: "Placebo dates, auto-bidding check", v: `${C.placebo.ch3_dates}`, s: `p = ${fmt(C.placebo.ch3_p, 2)}` },
     { cls: "est", k: "Sampler health (Bayesian fits)", v: `${div} divergences`, s: `max R-hat ${fmt(rh, 3)}` },
+    { cls: "naive", k: "MMM out-of-sample, 12 weeks", v: `${fmt(D.ch4.model_check.holdout.out_of_sample_mape_pct, 2)}% error`,
+      s: `90% range covered ${fmt(D.ch4.model_check.holdout.coverage90_out_of_sample * 100, 0)}% of weeks: too confident after the switch` },
   ]);
   $("log").innerHTML = D.log.map((e) => `<article><h3>${e.title}</h3><p>${e.body}</p></article>`).join("");
 })();

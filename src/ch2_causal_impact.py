@@ -73,6 +73,8 @@ def causal_impact(nat: pd.DataFrame, pre_weeks: tuple, post_weeks: tuple,
     divergences = int(idata.sample_stats["diverging"].values.sum())
 
     return {
+        # CausalImpact's standard read-out: posterior probability of an effect
+        "p_negative": float(np.mean(eff_draws < 0)),
         "effect": float(np.median(eff_draws)),
         "ci": [float(np.quantile(eff_draws, 0.025)), float(np.quantile(eff_draws, 0.975))],
         "effect_pct": float(np.median(eff_draws) / np.median(cf[is_post].sum(axis=0)) * 100),
@@ -107,6 +109,7 @@ def main():
     for pre, post in [((44, 69), (70, 73)), ((50, 75), (76, 78))]:
         r = causal_impact(nat, pre_weeks=pre, post_weeks=post, seed=2)
         placebos.append({"post_weeks": post, "effect_krw_m": round(r["effect"] / 1e6, 1),
+                         "p_negative": round(r["p_negative"], 3),
                          "ci_krw_m": [round(x / 1e6, 1) for x in r["ci"]],
                          "contains_zero": bool(r["ci"][0] <= 0 <= r["ci"][1])})
 
@@ -127,6 +130,7 @@ def main():
                                        round(-main_run["ci"][0] / withheld, 2)],
                           "max_rhat": main_run["max_rhat"],
                           "divergences": main_run["divergences"],
+                          "probability_of_loss": round(main_run["p_negative"], 3),
                           "category_elasticity": main_run["b"]},
         "placebo_checks": placebos,
         "series": main_run["series"],

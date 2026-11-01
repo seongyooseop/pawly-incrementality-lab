@@ -47,7 +47,11 @@ MODELS = {  # name: (calibrate, fitted weeks, seed)
     "before_tests": (False, HISTORY_WEEKS, 21),
     "after_tests": (True, HISTORY_WEEKS, 22),
     "all_weeks": (False, 104, 11),
+    # out-of-sample check: the all-weeks model refitted without its last 12 weeks
+    "holdout": (False, 92, 31),
 }
+PLANNING_MODELS = ["before_tests", "after_tests", "all_weeks"]
+HOLDOUT_FROM = 93
 
 
 def calibration_targets():
@@ -132,6 +136,7 @@ def summarize_fit(idata) -> dict:
     out = {"roi": post["roi"].values.T, "lam": post["lam"].values.T,
            "K": post["K"].values.T, "beta": post["beta"].values.T,
            "mu": post["mu"].values.T,
+           "sigma": post["sigma"].values,
            "max_rhat": np.array(float(summ["r_hat"].max())),
            "divergences": np.array(int(idata.sample_stats["diverging"].values.sum()))}
     for k in ("geo_test", "video_pause"):
@@ -274,7 +279,8 @@ def main():
     out["true_best_plan"] = {"multipliers": dict(zip(CHANNELS, true_best.round(2).tolist())),
                              "true_gain_krw_m": round(best_gain, 1)}
 
-    for name, d in fits.items():
+    for name in PLANNING_MODELS:
+        d = fits[name]
         calibrate, n_fit, _ = MODELS[name]
         tr = true_roi[n_fit]
         mu = d["mu"].T
@@ -284,7 +290,8 @@ def main():
                             round(float(np.quantile(d["roi"][:, j], 0.95)), 2)],
                    "truth": round(tr[c], 2),
                    "truth_inside": bool(np.quantile(d["roi"][:, j], 0.05) <= tr[c]
-                                        <= np.quantile(d["roi"][:, j], 0.95))}
+                                        <= np.quantile(d["roi"][:, j], 0.95)),
+                   "p_above_1": round(float(np.mean(d["roi"][:, j] > 1)), 2)}
                for j, c in enumerate(CHANNELS)}
         mroi = {}
         for j, c in enumerate(CHANNELS):
@@ -328,6 +335,33 @@ def main():
             "fitted_weekly": mu.mean(axis=1).round(1).tolist(),
         }
     out["weekly_actual"] = df.revenue.round(1).tolist()
+
+    # model check: convergence and in-sample fit per model, then the out-of-sample
+    # test (fit weeks 1-92, predict 93-104 with observation noise)
+    y_all = df.revenue.to_numpy()
+    h = fits["holdout"]
+    rng = np.random.default_rng(5)
+    pred = h["mu"] + rng.normal(size=h["mu"].shape) * h["sigma"][:, None]     # (S, T)
+    test = df.week.to_numpy() >= HOLDOUT_FROM
+    mean = pred.mean(axis=0)
+    lo, hi = np.quantile(pred, 0.05, axis=0), np.quantile(pred, 0.95, axis=0)
+    out["model_check"] = {
+        "convergence": {n: {"fitted_weeks": MODELS[n][1], "calibrated": MODELS[n][0],
+                            "max_rhat": round(float(fits[n]["max_rhat"]), 3),
+                            "divergences": int(fits[n]["divergences"]),
+                            "in_sample_mape_pct": round(float(100 * np.mean(
+                                np.abs(y_all[:MODELS[n][1]] - fits[n]["mu"].mean(axis=0)[:MODELS[n][1]])
+                                / y_all[:MODELS[n][1]])), 2)}
+                        for n in MODELS},
+        "holdout": {
+            "trained_on_weeks": [1, HOLDOUT_FROM - 1], "tested_on_weeks": [HOLDOUT_FROM, 104],
+            "in_sample_mape_pct": round(float(100 * np.mean(np.abs(y_all[~test] - mean[~test]) / y_all[~test])), 2),
+            "out_of_sample_mape_pct": round(float(100 * np.mean(np.abs(y_all[test] - mean[test]) / y_all[test])), 2),
+            "coverage90_out_of_sample": round(float(np.mean((y_all[test] >= lo[test]) & (y_all[test] <= hi[test]))), 2),
+            "series": {"week": df.week.tolist(), "actual": y_all.round(1).tolist(), "mean": mean.round(1).tolist(),
+                       "lo": lo.round(1).tolist(), "hi": hi.round(1).tolist()},
+        },
+    }
     (ROOT / "outputs" / "ch4_mmm.json").write_text(json.dumps(out, indent=2))
 
     print(json.dumps({k: out[k] for k in ("true_roi", "true_best_plan")}, indent=1))

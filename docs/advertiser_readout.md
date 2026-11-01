@@ -7,7 +7,7 @@
 
 ## Bottom line
 
-- Short-form video pays back in sales: about KRW 1.2 of extra sales per won during the test (range 0.6-1.8), and about 1.5 counting the two weeks after it, when part of the effect lands. The 4-week summer pause cost about KRW 93M in sales (range KRW 32M-KRW 164M), not the KRW 245M a before/after view suggests.
+- Short-form video pays back in sales: about KRW 1.2 of extra sales per won during the test (range 0.6-1.8), and about 1.5 counting the two weeks after it, when part of the effect lands. The 4-week summer pause cost about KRW 94M in sales (range KRW 30M-KRW 161M), not the KRW 245M a before/after view suggests.
 - The jump in reported search revenue after switching to AI auto-bidding (+93%) is almost entirely sales that were already happening, now credited to search. Total sales did not move (-0.2%, range -2.0% to +1.6%).
 - The 30% search budget increase that followed returned about KRW 0.15 per won (range -0.35 to 0.64): below break-even.
 - Added up, the platforms claim 1.3 times the sales that ads actually added. Short video is the only channel credited with less than it adds. At today's spend, the next won returns less than a won in every channel (model: 0.3-0.8), so shift budget first and then test a smaller total.
@@ -18,7 +18,7 @@
 | Question | Method | Answer | Confidence |
 |---|---|---|---|
 | Does short video add sales? | Geo test, 20 matched region pairs, 6 weeks | Yes. iROAS 1.20 (0.58-1.81); 1.52 with a 2-week cooldown; brand searches -5.3% in regions without video | High: A/A-checked design, one contaminated pair found and removed |
-| What did the summer pause cost? | Causal impact (Bayesian structural time series) | KRW 93M (KRW 32M-KRW 164M) | Medium: wide range, but consistent with the geo test |
+| What did the summer pause cost? | Causal impact (Bayesian structural time series) | KRW 94M (KRW 30M-KRW 161M) | Medium: wide range, but consistent with the geo test |
 | Is auto-bidding adding sales? | Total sales around the switch + 456 placebo dates | No measurable change (-0.2%); placebo p = 0.92 | High for 'no large effect'; a gain under ~2% cannot be ruled out |
 | How to split next year's budget? | Media mix model checked against both experiments | Move money from retargeting and search to short video; keep the total flat | Medium: search is the least certain channel |
 
@@ -43,6 +43,17 @@ Expected extra sales over a year: KRW 57M (90% range KRW -16M to KRW 113M). Move
 | Retargeting | 0.65 | 0.30 | 3.8x | 8.3x |
 
 Returns are in sales, from the 104-week model. A won of ad spend pays back when return x gross margin x lifetime multiple is at least 1. 'Lifetime multiple' = a new customer's total purchases divided by their first, which only PAWLY's own order data can tell. Margin of 40% is a placeholder.
+
+## Was measuring worth it?
+
+| Item | KRW M | Basis |
+|---|---:|---|
+| Cost of the geo test (sales lost incl. cooldown, minus video budget withheld) | 26.7 | 77.5M sales lost vs 50.8M not spent, 19 pairs |
+| Sales a repeat of the 4-week video pause would cost | 94.0 | Causal impact read of the summer pause; the geo test shows the loss is real |
+| Yearly loss if the 30% search increase had been kept | 263.9 | 23.7M extra spend returned 3.4M sales per 4 weeks, x13 |
+| Expected yearly gain from the reallocation | 57.1 | Model, 90%: -16 to 113M |
+
+The geo test cost about KRW 27M in sales. Each decision it and the follow-up reads support is worth several times that a year. In sales terms; profit depends on margin and repeat buying.
 
 ## What we are not sure about
 

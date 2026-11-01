@@ -7,6 +7,10 @@ profit depends on repeat purchases; the methods apply to any e-commerce advertis
 process, so every estimate is graded against the truth. Shared data preparation is done in SQL (DuckDB, [`sql/marts.sql`](sql/marts.sql)); the
 studies are in Python (PyMC, statsmodels).
 
+Why incrementality now: consent choices and app tracking limits hide a growing share of conversions, and automated
+bidding reports results the advertiser cannot audit. Click-based reports drift away from what ads add; experiments and
+models built on total sales are the check.
+
 **Live demo:** https://seongyooseop.github.io/pawly-incrementality-lab/site/ (or open `site/index.html`: one
 self-contained file, seven tabs, each with a "How to read this tab" guide).
 
@@ -15,10 +19,10 @@ self-contained file, seven tabs, each with a "How to read this tab" guide).
 | Question | Study | Naive answer | This study | Truth |
 |---|---|---|---|---|
 | Does short-form video add sales? | Geo experiment, 20 matched region pairs, 6 weeks | Platform ROAS 0.30 | iROAS **1.20** (95%: 0.58-1.81) | 1.48 |
-| What did a 4-week video pause cost? | Causal impact (Bayesian structural time series) | Before/after: KRW 245M | **KRW 93M** (32-164M) | KRW 115M |
+| What did a 4-week video pause cost? | Causal impact (Bayesian structural time series) | Before/after: KRW 245M | **KRW 94M** (30-161M); 99.7% probability of a loss | KRW 115M |
 | Reported search revenue +93% after AI auto-bidding. Real? | Total sales around the switch, 456 placebo dates | +KRW 242M reported | **-KRW 4M** (-42 to +33M), p = 0.92 | +KRW 13M |
 | Did the 30% budget increase that followed pay back? | Same design at the increase | Reported ROAS 6.87 | Marginal iROAS **0.15** (-0.35 to 0.64) | 0.61 |
-| Every platform claims the sale. Whose numbers? | Cross-platform: platform claims vs calibrated MMM | Claims add up to KRW 6.9B | Ads added **KRW 5.3B** (4.1-6.9B): claims are **1.3x** what ads added | 1.4x |
+| Every platform claims the sale. Whose numbers? | Cross-platform: platform claims vs calibrated MMM | Claims add up to KRW 6.9B | Ads added **KRW 5.3B** (4.1-7.0B): claims are **1.3x** what ads added | 1.4x |
 | How to split next year's budget? | Response curves, marginal ROI, plans run through the true world | - | Next won returns under a won in every channel; risk-aware plan keeps **64%** of the best possible gain | marginal ROI 0.3-0.8 |
 
 All 11 headline intervals contain the truth. The advertiser readout is in
@@ -29,7 +33,8 @@ in [`docs/advertiser_readout_ko.md`](docs/advertiser_readout_ko.md).
 
 0. **Pick the study from the question.** A decision table: which study answers which question, the minimum budget and
    duration each needs (eligibility), computed from PAWLY's own history, and what to do when an advertiser is below
-   the geo-test threshold.
+   the geo-test threshold. A readiness checklist comes first: do platform conversions reconcile with the advertiser's
+   own orders, are marketplace sales counted, are conversion signals complete enough after consent choices.
 1. **Geo experiment.** Regions paired by size, one per pair switched off. Before launch, past weeks are replayed as
    fake tests to measure power: a 6-week test detects a 2.6% revenue drop (any iROAS of 0.70 or more); 8 weeks adds
    almost nothing. The readout uses time-based regression (TBR); a pair diagnostic catches a retail promotion in one
@@ -39,18 +44,20 @@ in [`docs/advertiser_readout_ko.md`](docs/advertiser_readout_ko.md).
    a 30% go-dark share detects a return of 0.75 (vs 0.70) with about 60% of the sales at risk, so the next test uses
    it; a heavy-up can only detect a marginal return of 1.40, above anything this advertiser earns at the margin.
 2. **Causal impact.** A national pause with no holdout. The counterfactual comes from a Bayesian structural time series
-   in PyMC with pet-food category searches as the control series; geo-test weeks are masked. A before/after view
-   doubles the loss because the pause fell in the summer dip.
+   in PyMC with pet-food category searches as the control series; geo-test weeks are masked. Reported with the
+   posterior probability of a loss (99.7%) next to two placebo windows. A before/after view doubles the loss because
+   the pause fell in the summer dip.
 3. **Auto-bidding.** Regression discontinuity in time on total sales, with separate slopes on each side and placebo
    dates. 95-100% of the reported increase is sales that were already happening, re-credited to search.
 4. **Budget.** A weekly Bayesian MMM fitted before the tests and again with both experiment results as calibration
    terms. A cross-platform view sets each platform's self-reported revenue against what it added: short video is the
    only channel credited with less than it adds; search and retargeting are credited 3-4 times their contribution.
-   Marginal ROI at today's budget, response curves, then reallocations run through the true world.
+   Marginal ROI at today's budget, response curves, then reallocations run through the true world. A model check that
+   needs no truth: convergence, and a forecast for 12 weeks the model never saw.
 5. **Advertiser readout.** Bottom line, confidence, next year's budget, what the returns mean in profit (the repeat
    buying each channel needs to pay back at an assumed margin), a quarterly learning agenda for 2027 (search holdout,
    total-budget step-down, retargeting audience holdout, recalibrated MMM with a brand lift survey), what the advertiser
-   needs to provide, and internal notes for the account team (growth opportunity, how to position the search test,
+   needs to provide, whether the measuring was worth its cost, and internal notes for the account team (growth opportunity, how to position the search test,
    which parts are reusable for the next client).
 
 ## What did not go to plan
@@ -60,26 +67,32 @@ in [`docs/advertiser_readout_ko.md`](docs/advertiser_readout_ko.md).
 - **Trap 3 behaved differently from its design.** Video and search spend move together (correlation 0.85), meant to
   make the model hand video's effect to search. Instead search came out *under*-valued and least certain. The world
   was left as it is rather than tuned until the trap fired.
-- **Plans that follow the model's average lose most of the possible gain** (5-28%), because they cut the under-valued
-  search channel. Plans that move budget only where the model is confident keep 31-64%.
+- **Plans that follow the model's average can lose most of the possible gain** (5-36%), because they cut the
+  under-valued search channel. Plans that move budget only where the model is confident kept 31-64%; for the
+  calibrated model the two came out close (34% vs 36%).
+- **The MMM is too confident on weeks it has not seen.** Fitted on weeks 1-92, it forecasts weeks 93-104 within
+  1.37% (0.66% in sample), but only 50% of those weeks fall inside its 90% range: after the auto-bidding switch it
+  under-predicts every week. Its ranges are a floor on the real uncertainty, and it needs a refit after a structural
+  change.
 - **Social cannot be called.** The model puts social's return above what the platform reports; the truth puts it
   slightly below. Its interval contains the report, so the cross-platform view says "unclear" instead of guessing.
 
-Every problem the checks caught is in [`docs/ai_workflow_log.md`](docs/ai_workflow_log.md) (24 entries), including
+Every problem the checks caught is in [`docs/ai_workflow_log.md`](docs/ai_workflow_log.md) (29 entries), including
 an A/A test that showed the textbook TBR crying wolf 22% of the time.
 
-## How the methods map to platform tools
+## How the methods map to Google measurement tools
 
-The study is written in platform-neutral terms. The closest named tools:
+The study is written in plain method names. The closest Google tools:
 
-| This project | Google | TikTok |
-|---|---|---|
-| Geo experiment with TBR, A/A-calibrated | GeoX (geo experiments), TBR / Trimmed Match | Lift studies (conversion lift) |
-| Brand-search lift as a second KPI | Search Lift, Brand Lift | Brand Lift Study |
-| Causal impact (Bayesian structural time series) | CausalImpact (open source) | - |
-| Reported vs incremental under AI auto-bidding | Smart Bidding, Performance Max | Automated campaign solutions |
-| Cross-platform view: platform claims vs incremental revenue | Cross-platform analysis (GA4 data) | 1P vs 3P measurement |
-| Bayesian MMM with experiment calibration, response curves | Meridian (open source) | MMM with measurement partners |
+| This project | Google |
+|---|---|
+| Geo experiment with TBR, A/A-calibrated; power and eligibility from past weeks | GeoX (geo experiments), geo-based Conversion Lift, TBR / Trimmed Match |
+| Brand-search lift as a second KPI | Search Lift, Brand Lift |
+| Causal impact (Bayesian structural time series), with the posterior probability of an effect | CausalImpact (open source) |
+| Reported vs incremental under AI auto-bidding | Smart Bidding, Performance Max |
+| Cross-platform view: platform claims vs incremental revenue | Cross-platform analysis (GA4 data) |
+| Bayesian MMM with experiment calibration, response curves, out-of-sample check | Meridian (open source) |
+| Measurement readiness checklist | Conversion tracking, enhanced conversions, consent mode, offline conversion import |
 
 ## Pipeline
 
@@ -93,7 +106,7 @@ python src/ch1_readout.py        # geo test readout and pair diagnostic
 python src/ch1_montecarlo.py     # the same readout on 60 noise draws
 python src/ch2_causal_impact.py  # Bayesian structural time series (PyMC)
 python src/ch3_auto_bidding.py   # RDiT + placebo dates; budget increase
-python src/ch4_mmm.py            # MMM before/after tests, marginal ROI, response curves, plans (--refit to refit)
+python src/ch4_mmm.py            # MMM before/after tests, out-of-sample check, marginal ROI, response curves, plans (--refit to refit)
 python src/cross_platform.py     # platform claims vs incremental revenue
 python src/validation.py         # every headline number vs truth
 python src/ch5_report.py         # advertiser readout (JSON + docs/advertiser_readout.md)

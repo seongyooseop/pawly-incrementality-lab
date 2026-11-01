@@ -71,6 +71,24 @@ def main():
                        "lifetime_multiple_needed_average": round(1 / (GROSS_MARGIN * avg), 1),
                        "lifetime_multiple_needed_next_won": round(1 / (GROSS_MARGIN * nxt), 1)})
     p_video = next(p for p in profit if p["channel"] == NAMES["short_video"])
+
+    # was measuring worth it? cost of the geo test vs the decisions it supports
+    test_cost = -cool["effect_krw_m"] - cool["video_withheld_krw_m"]          # sales lost net of spend saved
+    up_waste_4w = bu["extra_search_spend_4w_krw_m"] - bu["incremental_revenue_4w_krw_m"]
+    worth = {
+        "rows": [
+            {"item": "Cost of the geo test (sales lost incl. cooldown, minus video budget withheld)", "krw_m": round(test_cost, 1),
+             "basis": f"{-cool['effect_krw_m']:.1f}M sales lost vs {cool['video_withheld_krw_m']:.1f}M not spent, 19 pairs"},
+            {"item": "Sales a repeat of the 4-week video pause would cost", "krw_m": round(-ci["effect_krw_m"], 1),
+             "basis": "Causal impact read of the summer pause; the geo test shows the loss is real"},
+            {"item": "Yearly loss if the 30% search increase had been kept", "krw_m": round(up_waste_4w * 13, 1),
+             "basis": f"{bu['extra_search_spend_4w_krw_m']:.1f}M extra spend returned {bu['incremental_revenue_4w_krw_m']:.1f}M sales per 4 weeks, x13"},
+            {"item": "Expected yearly gain from the reallocation", "krw_m": round(final["predicted_gain_krw_m"]["median"], 1),
+             "basis": f"Model, 90%: {final['predicted_gain_krw_m']['ci90'][0]:.0f} to {final['predicted_gain_krw_m']['ci90'][1]:.0f}M"},
+        ],
+        "note": (f"The geo test cost about {m(test_cost)} in sales. Each decision it and the follow-up reads support is worth "
+                 f"several times that a year. In sales terms; profit depends on margin and repeat buying."),
+    }
     p_min_next = min(p["lifetime_multiple_needed_next_won"] for p in profit)
 
     report = {
@@ -131,6 +149,7 @@ def main():
                      f"'Lifetime multiple' = a new customer's total purchases divided by their first, which only PAWLY's own order data can tell. "
                      f"Margin of {GROSS_MARGIN:.0%} is a placeholder."),
         },
+        "worth_it": worth,
         "not_sure": [
             f"Search's return is the widest range in the model (90%: {roi_all['search']['ci90'][0]:.1f}-"
             f"{roi_all['search']['ci90'][1]:.1f}). A plan built on the model's average alone would cut search "
@@ -201,7 +220,9 @@ def main():
            "|---|---:|---:|---:|---:|"]
     md += [f"| {p['channel']} | {p['average_return']:.2f} | {p['next_won_return']:.2f} | {p['lifetime_multiple_needed_average']}x | "
            f"{p['lifetime_multiple_needed_next_won']}x |" for p in profit]
-    md += ["", report["profit"]["note"], "", "## What we are not sure about", ""]
+    md += ["", report["profit"]["note"], "", "## Was measuring worth it?", "", "| Item | KRW M | Basis |", "|---|---:|---|"]
+    md += [f"| {w['item']} | {w['krw_m']:,.1f} | {w['basis']} |" for w in worth["rows"]]
+    md += ["", worth["note"], "", "## What we are not sure about", ""]
     md += [f"- {x}" for x in report["not_sure"]]
     nt = report["next_test"]
     md += ["", "## Next test", "", f"**{nt['what']}.** {nt['why']}. {nt['eligibility']}.",
@@ -232,6 +253,10 @@ def main():
            f"위 숫자는 모두 매출 기준입니다. 매출총이익률을 {GROSS_MARGIN:.0%}로 가정하면, 숏폼 영상은 새 고객이 평생 첫 구매의 "
            f"{p_video['lifetime_multiple_needed_average']}배 이상 사면 광고비를 회수합니다. 지금보다 1원을 더 쓰는 경우에는 어느 채널이든 "
            f"{p_min_next}배 이상이 필요합니다. 실제 이익률과 재구매 데이터를 주시면 이익 기준으로 다시 계산하겠습니다.",
+           "", "## 측정은 할 만했나", "",
+           f"지역 실험의 비용은 매출 기준 약 {eok(test_cost)}입니다(실험 뒤 2주 포함 잃은 매출 {eok(-cool['effect_krw_m'])} − 쓰지 않은 영상 광고비 "
+           f"{eok(cool['video_withheld_krw_m'])}). 반면 이 측정으로 막거나 얻는 것은 해마다 그 몇 배입니다: 영상 4주 중단을 반복하면 잃을 매출 약 "
+           f"{eok(-ci['effect_krw_m'])}, 검색 30% 증액을 유지했다면 1년 손실 약 {eok(up_waste_4w * 13)}, 재배분 기대 이득 연 약 {eok(final['predicted_gain_krw_m']['median'])}.",
            "", "## 2027년 측정 계획", "", "| 분기 | 확인할 질문 | 방법 |", "|---|---|---|",
            "| 1분기 | 검색 광고는 실제로 얼마나 기여하나? | 30% 지역에서 6주간 검색 광고 중단(+2주 관찰) |",
            "| 2분기 | 총예산이 너무 많은가? | 일부 지역에서 모든 광고를 20% 줄여 6주 비교 |",
