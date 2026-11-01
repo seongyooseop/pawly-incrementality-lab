@@ -2,8 +2,9 @@
 
 A measurement portfolio project for a **fictional** Korean pet-food brand, "PAWLY", that sells direct to consumers
 and through two marketplaces in 40 regions. It answers five questions a small, fast-growing advertiser asks about its
-ads, each with the study that fits the question. All data is simulated from a known process, so every estimate is
-graded against the truth. Shared data preparation is done in SQL (DuckDB, [`sql/marts.sql`](sql/marts.sql)); the
+ads, each with the study that fits the question. PAWLY was chosen as a typical fast-growing small D2C advertiser whose
+profit depends on repeat purchases; the methods apply to any e-commerce advertiser. All data is simulated from a known
+process, so every estimate is graded against the truth. Shared data preparation is done in SQL (DuckDB, [`sql/marts.sql`](sql/marts.sql)); the
 studies are in Python (PyMC, statsmodels).
 
 **Open it:** `site/index.html` (one self-contained file, seven tabs, each with a "How to read this tab" guide).
