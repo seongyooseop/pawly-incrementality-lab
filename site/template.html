@@ -787,7 +787,7 @@ try { const saved = localStorage.getItem("pawly-tab"); if (saved) document.query
   $("memo").innerHTML = `
     <div><div class="eyebrow">Measurement readout · fictional brand, synthetic data</div><h2 style="margin-top:4px">PAWLY: what the ads really did, and what to do next</h2></div>
     <dl><dt>To</dt><dd>${r.to}</dd><dt>From</dt><dd>${r.from}</dd><dt>Period</dt><dd>${r.period}</dd></dl>
-    <section class="aside" lang="ko"><h3>사장님용 세 줄 요약 (Korean summary for the business owner)</h3><ol style="margin:0;padding-left:20px;display:grid;gap:6px">${r.korean_summary.map((s) => `<li>${s}</li>`).join("")}</ol>
+    <section class="aside" lang="ko"><h3>광고주용 세 줄 요약 (plain-language Korean summary for the advertiser)</h3><ol style="margin:0;padding-left:20px;display:grid;gap:6px">${r.korean_summary.map((s) => `<li>${s}</li>`).join("")}</ol>
       <p class="small">Full Korean readout: docs/advertiser_readout_ko.md</p></section>
     <section><h3>Bottom line</h3><ul>${r.bottom_line.map((b) => `<li>${b}</li>`).join("")}</ul></section>
     <section><h3>What we measured</h3><div class="tbl"><table><thead><tr><th>Question</th><th>Method</th><th>Answer</th><th>Confidence</th></tr></thead><tbody>

@@ -26,7 +26,7 @@ self-contained file, seven tabs, each with a "How to read this tab" guide).
 | How to split next year's budget? | Response curves, marginal ROI, plans run through the true world | - | Next won returns under a won in every channel; risk-aware plan keeps **64%** of the best possible gain | marginal ROI 0.3-0.8 |
 
 All 11 headline intervals contain the truth. The advertiser readout is in
-[`docs/advertiser_readout.md`](docs/advertiser_readout.md), with a plain-language Korean version for the business owner
+[`docs/advertiser_readout.md`](docs/advertiser_readout.md), with a plain-language Korean version for the advertiser
 in [`docs/advertiser_readout_ko.md`](docs/advertiser_readout_ko.md).
 
 ## Chapters

@@ -86,7 +86,7 @@ A teammate's first question: would an account team accept switching video off in
 **22. Every return was in sales, none in profit.**
 An iROAS of 1.2 is not profit. With gross margin only the advertiser knows (40% used as a placeholder), the readout now states how much repeat buying each channel needs to pay back: short video needs a new customer's lifetime purchases to reach 1.6x their first; the next won in any channel needs 3x or more. Margin and repeat rates are added to what the advertiser is asked to provide.
 
-**23. The readout spoke to analysts, not to a small-business owner.**
+**23. The readout spoke to analysts, not to the advertiser.**
 Added a three-sentence Korean summary in plain words (no iROAS, no intervals) at the top of the readout, and a full Korean version in docs/advertiser_readout_ko.md. Also added a playbook row for advertisers below the geo-test threshold: platform conversion lift or a planned on/off period read, with the warning that an underpowered test should read "can't tell yet", not "no effect".
 
 **24. The readout had no answer to "what does this mean for the account?"**

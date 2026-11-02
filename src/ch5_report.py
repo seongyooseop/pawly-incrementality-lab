@@ -2,7 +2,7 @@
 
 Plain language, numbers with ranges, one recommendation, a learning agenda,
 what it means in profit, and what the advertiser needs to provide; a Korean
-version for the business owner; and internal notes for the account team.
+version for the advertiser; and internal notes for the account team.
 The budget plan uses the model fitted on all 104 weeks (the tests added the
 spend variation the earlier model lacked) and the risk-aware objective, which
 moves money only where the model is sure.
