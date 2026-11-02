@@ -198,6 +198,34 @@ def main():
             "Reusable for the next client: the study-selection table and the eligibility calculation (power from past weeks, A/A calibration) "
             "run on any region-by-day sales table in the same format.",
         ],
+        # the study is written in method names; for the account team, each finding mapped to the Google solution
+        # it argues for and the measurement product that proves it
+        "google_solutions": [
+            {"finding": f"Short video adds about {r1['after_check']['revenue']['iroas']:.1f} won per won but its platform reports 0.30",
+             "solution": "YouTube Shorts through Demand Gen and video campaigns",
+             "prove_with": "Geo-based Conversion Lift on the next increase; Brand Lift and Search Lift for the awareness part",
+             "pitch": f"Grow video {budget[1]['change_pct']:+d}% on experiment evidence, not on the platform's click report"},
+            {"finding": f"Search is the least certain channel (model range {roi_all['search']['ci90'][0]:.1f}-{roi_all['search']['ci90'][1]:.1f})",
+             "solution": "Search campaigns and Performance Max with Smart Bidding",
+             "prove_with": "GeoX holdout on 30% of regions (Q1)",
+             "pitch": "Prove, then reinvest: the holdout either confirms search or frees budget for video"},
+            {"finding": "After the switch to auto-bidding, almost all of the reported gain was sales already happening",
+             "solution": "Performance Max brand exclusions, new-customer acquisition goal, value-based bidding on margin",
+             "prove_with": "Total-sales read around each bidding change (as in chapter 3)",
+             "pitch": "Point automated bidding at new buyers and profit, so its reported results move closer to what it adds"},
+            {"finding": "Retargeting is credited about 4 times what it adds",
+             "solution": "Remarketing audiences in Demand Gen and Display",
+             "prove_with": "User-based Conversion Lift with an audience holdout where available, else a geo holdout (Q3)",
+             "pitch": "Trim retargeting where the holdout shows little lift and move it to prospecting"},
+            {"finding": "GA4 sees about half of sales: marketplaces and unconsented sessions are missing",
+             "solution": "Enhanced conversions and consent mode on the site, GA4 linked to Ads",
+             "prove_with": "Monthly reconciliation of Ads and GA4 conversions with the order system; marketplace sales, which no click ID reaches, stay with geo tests and the MMM",
+             "pitch": "Better signals improve Smart Bidding and every later study; a setup task, not a budget ask"},
+            {"finding": "The MMM needs a refresh after any structural change",
+             "solution": "Meridian (open source), recalibrated with each lift result",
+             "prove_with": "Out-of-sample check after each refit, as on the Budget tab",
+             "pitch": "One model the advertiser and Google both read, updated each quarter"},
+        ],
     }
     (ROOT / "outputs" / "ch5_report.json").write_text(json.dumps(report, indent=2, ensure_ascii=False))
 
@@ -232,6 +260,8 @@ def main():
     md += [f"- {x}" for x in report["asks"]]
     md += ["", "---", "", "## Internal: notes for the account team (not sent to the advertiser)", ""]
     md += [f"- {x}" for x in report["account_team_notes"]]
+    md += ["", "### Findings mapped to Google solutions", "", "| Finding | Google solution | Prove with | Pitch |", "|---|---|---|---|"]
+    md += [f"| {g['finding']} | {g['solution']} | {g['prove_with']} | {g['pitch']} |" for g in report["google_solutions"]]
     (ROOT / "docs" / "advertiser_readout.md").write_text("\n".join(md) + "\n", encoding="utf-8")
 
     # ----------------------------------------------------------- Korean

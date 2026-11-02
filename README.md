@@ -60,7 +60,8 @@ in [`docs/advertiser_readout_ko.md`](docs/advertiser_readout_ko.md).
    buying each channel needs to pay back at an assumed margin), a quarterly learning agenda for 2027 (search holdout,
    total-budget step-down, retargeting audience holdout, recalibrated MMM with a brand lift survey), what the advertiser
    needs to provide, whether the measuring was worth its cost, and internal notes for the account team (growth opportunity, how to position the search test,
-   which parts are reusable for the next client).
+   which parts are reusable for the next client), with each finding mapped to the Google solution it argues for and
+   the lift study that would prove it.
 
 ## What did not go to plan
 
@@ -81,7 +82,7 @@ in [`docs/advertiser_readout_ko.md`](docs/advertiser_readout_ko.md).
 - **Social cannot be called.** The model puts social's return above what the platform reports; the truth puts it
   slightly below. Its interval contains the report, so the cross-platform view says "unclear" instead of guessing.
 
-Every problem the checks caught is in [`docs/ai_workflow_log.md`](docs/ai_workflow_log.md) (32 entries), including
+Every problem the checks caught is in [`docs/ai_workflow_log.md`](docs/ai_workflow_log.md) (33 entries), including
 an A/A test that showed the textbook TBR crying wolf 22% of the time.
 
 ## How the methods map to Google measurement tools

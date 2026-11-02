@@ -120,3 +120,6 @@ Refitted on weeks 1-100, the model still under-predicts weeks 101-104 by 1.5% (2
 **32. Forty geo units of equal size is generous for Korea.**
 Added a limit: matched pairs in Korea would be built from city and county clusters, Seoul and Gyeonggi are hard to split, and regional sales need shipping addresses. Where pairs cannot be matched, the playbook's fallback is a user-level conversion lift study.
 
+**33. The account-team notes never named a Google product.**
+The study is written in method names on purpose, but an MIE works with the account team to grow adoption of specific solutions. Added a table to the internal notes only: each finding, the Google solution it argues for, the measurement that would prove it, and the pitch (short video to YouTube Shorts through Demand Gen, proved with geo-based Conversion Lift; search to a GeoX holdout before reinvesting; auto-bidding to Performance Max brand exclusions and a new-customer goal; retargeting to a user-based lift holdout; tracking gaps to enhanced conversions and consent mode; the model to Meridian). Two first-draft mappings were wrong and fixed: Search Lift measures searches driven by video ads, so it belongs with video, not search; and offline conversion import cannot reach marketplace orders, which carry no click ID, so those stay with geo tests and the MMM.
+

@@ -808,7 +808,11 @@ try { const saved = localStorage.getItem("pawly-tab"); if (saved) document.query
     <section><h3>What we need from you</h3><ul>${r.asks.map((x) => `<li>${x}</li>`).join("")}</ul></section>`;
   $("ae-notes").innerHTML = `
     <div><div class="eyebrow">Internal · not sent to the advertiser</div><h2 style="margin-top:4px">Notes for the account team</h2></div>
-    <ul>${r.account_team_notes.map((x) => `<li>${x}</li>`).join("")}</ul>`;
+    <ul>${r.account_team_notes.map((x) => `<li>${x}</li>`).join("")}</ul>
+    <h3 style="margin-top:14px">Findings mapped to Google solutions</h3>
+    <p class="small">The study uses method names; this is how the account team takes each finding to a Google product and the measurement that proves it.</p>
+    <div class="tbl"><table><thead><tr><th>Finding</th><th>Google solution</th><th>Prove with</th><th>Pitch</th></tr></thead><tbody>
+      ${r.google_solutions.map((g) => `<tr><td>${g.finding}</td><td>${g.solution}</td><td>${g.prove_with}</td><td>${g.pitch}</td></tr>`).join("")}</tbody></table></div>`;
 })();
 
 // ------------------------------------------------------------ checks

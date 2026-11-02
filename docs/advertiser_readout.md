@@ -90,3 +90,14 @@ The geo test cost about KRW 27M in sales. Each decision it and the follow-up rea
 - The total-budget step-down builds trust: an advertiser who sees us test spending less believes us when we ask for more.
 - Studies to propose next: 30% regional holdout for search, audience holdout for retargeting, brand lift survey for video, recalibrated MMM.
 - Reusable for the next client: the study-selection table and the eligibility calculation (power from past weeks, A/A calibration) run on any region-by-day sales table in the same format.
+
+### Findings mapped to Google solutions
+
+| Finding | Google solution | Prove with | Pitch |
+|---|---|---|---|
+| Short video adds about 1.2 won per won but its platform reports 0.30 | YouTube Shorts through Demand Gen and video campaigns | Geo-based Conversion Lift on the next increase; Brand Lift and Search Lift for the awareness part | Grow video +15% on experiment evidence, not on the platform's click report |
+| Search is the least certain channel (model range 0.4-1.7) | Search campaigns and Performance Max with Smart Bidding | GeoX holdout on 30% of regions (Q1) | Prove, then reinvest: the holdout either confirms search or frees budget for video |
+| After the switch to auto-bidding, almost all of the reported gain was sales already happening | Performance Max brand exclusions, new-customer acquisition goal, value-based bidding on margin | Total-sales read around each bidding change (as in chapter 3) | Point automated bidding at new buyers and profit, so its reported results move closer to what it adds |
+| Retargeting is credited about 4 times what it adds | Remarketing audiences in Demand Gen and Display | User-based Conversion Lift with an audience holdout where available, else a geo holdout (Q3) | Trim retargeting where the holdout shows little lift and move it to prospecting |
+| GA4 sees about half of sales: marketplaces and unconsented sessions are missing | Enhanced conversions and consent mode on the site, GA4 linked to Ads | Monthly reconciliation of Ads and GA4 conversions with the order system; marketplace sales, which no click ID reaches, stay with geo tests and the MMM | Better signals improve Smart Bidding and every later study; a setup task, not a budget ask |
+| The MMM needs a refresh after any structural change | Meridian (open source), recalibrated with each lift result | Out-of-sample check after each refit, as on the Budget tab | One model the advertiser and Google both read, updated each quarter |
