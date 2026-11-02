@@ -105,9 +105,9 @@ footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--gri
     <h1>PAWLY Incrementality Lab</h1>
     <p class="lede">Five questions a small advertiser asks about its ads, each answered with the study that fits it:
       a geo experiment designed for power, a causal-impact readout of a pause, a check of what AI auto-bidding really added,
-      and a media mix model calibrated with the experiments. Every number is graded against the hidden truth of the simulated world.</p>
+      a media mix model calibrated with the experiments, and a cross-platform check of platform and GA4 credit. Every number is graded against the hidden truth of the simulated world.</p>
     <p class="lede" style="margin-top:4px">PAWLY was chosen as a typical fast-growing small D2C advertiser whose profit depends on repeat purchases; the methods apply to any e-commerce advertiser.</p>
-    <p style="margin-top:8px"><span class="badge">All data synthetic · no real brand, platform or customer</span></p>
+    <p style="margin-top:8px"><span class="badge">All data synthetic · no real brand or customer data</span></p>
   </header>
 
   <nav class="tabs" role="tablist" aria-label="Chapters">
@@ -123,7 +123,7 @@ footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--gri
   <!-- ================= Start ================= -->
   <section class="view" id="view-start" role="tabpanel">
     <div class="panel">
-      <h2>Three things PAWLY's own reports got wrong</h2>
+      <h2>Three things the ad platforms' reports got wrong</h2>
       <div class="tiles" id="findings"></div>
     </div>
     <div class="panel">
@@ -190,7 +190,7 @@ footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--gri
         <h3>Readout</h3>
         <div class="tiles" id="geo-tiles"></div>
         <p class="note" id="geo-flag"></p>
-        <h3 style="margin-top:6px">Is dropping the pair the right call? 60 luck draws</h3>
+        <h3 style="margin-top:6px">Is dropping the pair the right call? 60 re-runs on fresh noise</h3>
         <div class="tbl"><table id="mc"></table></div>
         <p class="note" id="mc-note"></p>
       </div>
@@ -823,7 +823,7 @@ try { const saved = localStorage.getItem("pawly-tab"); if (saved) document.query
   tiles("check-tiles", [
     { cls: "est", k: "Headline numbers whose interval holds the truth", v: `${V.covered} of ${V.n}` },
     { cls: "est", k: "A/A false positives, 6-week geo test", v: `${fmt(C.aa_false_positives_6w.calibrated_holdout * 100, 1)}%`, s: `before calibration ${fmt(C.aa_false_positives_6w.uncalibrated * 100, 0)}%` },
-    { cls: "est", k: "Interval coverage over 60 luck draws", v: `${fmt(C.monte_carlo_60_draws.without_contaminated_pair.ci_coverage * 100, 0)}%`, s: "geo test, after the check" },
+    { cls: "est", k: "Interval coverage over 60 re-runs on fresh noise", v: `${fmt(C.monte_carlo_60_draws.without_contaminated_pair.ci_coverage * 100, 0)}%`, s: "geo test, after the check" },
     { cls: "est", k: "Placebo dates, auto-bidding check", v: `${C.placebo.ch3_dates}`, s: `p = ${fmt(C.placebo.ch3_p, 2)}` },
     { cls: "est", k: "Sampler health (Bayesian fits)", v: `${div} divergences`, s: `max R-hat ${fmt(rh, 3)}` },
     { cls: "naive", k: "MMM out-of-sample, 12 weeks", v: `${fmt(D.ch4.model_check.holdout.out_of_sample_mape_pct, 2)}% error`,

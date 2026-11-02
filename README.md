@@ -83,7 +83,7 @@ in [`docs/advertiser_readout_ko.md`](docs/advertiser_readout_ko.md).
   slightly below. Its interval contains the report, so the cross-platform view says "unclear" instead of guessing.
 
 Every problem the checks caught is in [`docs/ai_workflow_log.md`](docs/ai_workflow_log.md) (34 entries), including
-an A/A test that showed the textbook TBR crying wolf 22% of the time.
+an A/A test that showed the textbook TBR flagging an effect that wasn't there 22% of the time.
 
 ## How the methods map to Google measurement tools
 

@@ -32,6 +32,10 @@ def m(x):
     return f"KRW {x:,.0f}M"
 
 
+def krw_range(lo, hi):
+    return f"KRW {lo:,.0f}-{hi:,.0f}M"
+
+
 def eok(x_m):
     """Million KRW -> Korean 억/만 원 wording."""
     return f"{x_m / 100:,.1f}억 원" if abs(x_m) >= 100 else f"{x_m * 100:,.0f}만 원"
@@ -88,8 +92,8 @@ def main():
             {"item": "Expected yearly gain from the reallocation", "krw_m": round(final["predicted_gain_krw_m"]["median"], 1),
              "basis": f"Model, 90%: {final['predicted_gain_krw_m']['ci90'][0]:.0f} to {final['predicted_gain_krw_m']['ci90'][1]:.0f}M"},
         ],
-        "note": (f"The geo test cost about {m(test_cost)} in sales. Each decision it and the follow-up reads support is worth "
-                 f"several times that a year. In sales terms; profit depends on margin and repeat buying."),
+        "note": (f"The geo test cost about {m(test_cost)} in sales. The decisions it supports are each worth several times that "
+                 f"a year in sales; profit depends on margin and repeat buying."),
     }
     p_min_next = min(p["lifetime_multiple_needed_next_won"] for p in profit)
 
@@ -99,9 +103,9 @@ def main():
         "period": "Nov 2024 - Oct 2026 (104 weeks)",
         "bottom_line": [
             f"Short-form video pays back in sales: about KRW {geo['iroas']:.1f} of extra sales per won during the test "
-            f"(range {geo['iroas_ci'][0]:.1f}-{geo['iroas_ci'][1]:.1f}), and about {cool['iroas']:.1f} counting the two weeks after it, "
+            f"(95% range {geo['iroas_ci'][0]:.1f}-{geo['iroas_ci'][1]:.1f}), and about {cool['iroas']:.1f} counting the two weeks after it, "
             f"when part of the effect lands. The 4-week summer pause cost about "
-            f"{m(-ci['effect_krw_m'])} in sales (range {m(-ci['ci_krw_m'][1])}-{m(-ci['ci_krw_m'][0])}), "
+            f"{m(-ci['effect_krw_m'])} in sales (95% range {krw_range(-ci['ci_krw_m'][1], -ci['ci_krw_m'][0])}), "
             f"not the {m(-c2['naive_before_after']['effect_krw_m'])} a before/after view suggests.",
             f"The jump in reported search revenue after switching to AI auto-bidding "
             f"(+{c3['platform_view']['reported_increase_pct']:.0f}%) is almost entirely sales that were already "
@@ -120,9 +124,9 @@ def main():
         ],
         "korean_summary": [
             f"숏폼 영상 광고는 효과가 있습니다. 광고비 1원당 매출이 약 {geo['iroas']:.1f}원(실험 직후 2주까지 보면 약 {cool['iroas']:.1f}원) "
-            f"늘었습니다. 광고 플랫폼 화면에는 0.3원으로 나와 크게 과소평가되어 있습니다.",
-            f"검색 광고를 자동 입찰로 바꾼 뒤 화면상 매출은 {c3['platform_view']['reported_increase_pct']:.0f}% 늘었지만, "
-            f"실제 전체 매출은 그대로였습니다. 원래 사던 손님이 광고 덕분으로 다시 집계된 것입니다. 그 숫자를 보고 늘린 예산은 회수되지 않았습니다.",
+            f"늘었습니다. 광고 플랫폼 보고서에는 0.3원으로 나와 크게 과소평가되어 있습니다.",
+            f"검색 광고를 자동 입찰로 바꾼 뒤 플랫폼 보고 매출은 {c3['platform_view']['reported_increase_pct']:.0f}% 늘었지만, "
+            f"실제 전체 매출은 그대로였습니다. 광고가 없어도 샀을 손님의 구매가 광고 성과로 다시 집계된 것입니다. 그 숫자를 보고 늘린 예산은 회수되지 않았습니다.",
             f"내년에는 리타깃팅을 줄이고 숏폼 영상을 늘리되, 총예산은 그대로 둡니다. 검색은 먼저 일부 지역에서 꺼 보는 실험으로 "
             f"확인한 뒤 결정합니다. 광고 1원을 더 쓸 때 돌아오는 매출이 모든 채널에서 1원보다 적어, 재구매 데이터로 이익을 확인하는 것이 다음 순서입니다.",
         ],
@@ -132,11 +136,11 @@ def main():
                        f"brand searches {r1['after_check']['brand_search']['effect_pct']:.1f}% in regions without video",
              "confidence": "High: A/A-checked design, one contaminated pair found and removed"},
             {"question": "What did the summer pause cost?", "method": "Causal impact (Bayesian structural time series)",
-             "answer": f"{m(-ci['effect_krw_m'])} ({m(-ci['ci_krw_m'][1])}-{m(-ci['ci_krw_m'][0])})",
+             "answer": f"{m(-ci['effect_krw_m'])} ({krw_range(-ci['ci_krw_m'][1], -ci['ci_krw_m'][0])})",
              "confidence": "Medium: wide range, but consistent with the geo test"},
             {"question": "Is auto-bidding adding sales?", "method": "Total sales around the switch + 456 placebo dates",
              "answer": f"No measurable change ({au['jump_pct']:+.1f}%); placebo p = {au['placebo_p']:.2f}",
-             "confidence": "High for 'no large effect'; a gain under ~2% cannot be ruled out"},
+             "confidence": "High for 'no large effect'; a gain under about 2% cannot be ruled out"},
             {"question": "How to split next year's budget?", "method": "Media mix model checked against both experiments",
              "answer": "Move money from retargeting and search to short video; keep the total flat",
              "confidence": "Medium: search is the least certain channel"},
@@ -190,7 +194,7 @@ def main():
         "asks": [
             "Share the media plan before each test: booked budgets are the denominator of every return figure.",
             "Share gross margin and repeat-purchase rates by first-purchase month, so returns can be read as profit.",
-            "Tell us about regional promotions during a test (the G26 retail promotion would have inflated the result by about a quarter).",
+            "Tell us about regional promotions during a test (a retail promotion in one control region, G26, would have inflated the result by about a quarter).",
             "Keep budgets flat during tests, and send daily total sales from your own order system.",
             f"Link GA4 to Google Ads and turn on enhanced conversions and consent mode: GA4 sees about {ga['ga4_sees_pct_of_revenue']:.0f}% of "
             "your sales today, and better signals help both automated bidding and the next study.",
@@ -276,12 +280,12 @@ def main():
     ko += [f"{i}. {s}" for i, s in enumerate(report["korean_summary"], 1)]
     ko += ["", "## 무엇을 측정했나", "", "| 질문 | 방법 | 결과 |", "|---|---|---|",
            f"| 숏폼 영상이 매출을 늘리나? | 비슷한 지역 20쌍 중 한 곳씩 6주간 영상 중단 | 광고비 1원당 매출 {geo['iroas']:.2f}원 "
-           f"(범위 {geo['iroas_ci'][0]:.2f}~{geo['iroas_ci'][1]:.2f}), 실험 뒤 2주 포함 시 {cool['iroas']:.2f}원 |",
+           f"(95% 범위 {geo['iroas_ci'][0]:.2f}~{geo['iroas_ci'][1]:.2f}), 실험 뒤 2주 포함 시 {cool['iroas']:.2f}원 |",
            f"| 여름 4주 영상 중단으로 잃은 매출은? | 광고와 무관한 카테고리 검색량으로 '중단 안 했으면' 매출 추정 | 약 {eok(-ci['effect_krw_m'])} "
            f"(단순 전후 비교의 {eok(-c2['naive_before_after']['effect_krw_m'])}은 여름 비수기까지 포함한 과대 추정) |",
            f"| 자동 입찰이 매출을 늘렸나? | 전환 시점 전후 전체 매출 비교 + 과거 456일과 비교 | 변화 없음({au['jump_pct']:+.1f}%) |",
-           f"| 플랫폼 화면 숫자는 믿을 만한가? | 플랫폼별 보고 매출 합계 vs 실제 광고 기여 | 보고가 실제의 {xp['claimed_vs_added']:.1f}배 |",
-           f"| 우리 GA4 숫자는? | GA4가 채널에 나눠 준 몫 vs 실제 광고 기여 몫 | GA4는 매출의 {ga['ga4_sees_pct_of_revenue']:.0f}%만 봅니다. "
+           f"| 플랫폼 보고 숫자는 믿을 만한가? | 플랫폼별 보고 매출 합계 vs 실제 광고 기여 | 보고가 실제의 {xp['claimed_vs_added']:.1f}배 |",
+           f"| 자사 GA4 숫자는? | GA4가 채널에 나눠 준 몫 vs 실제 광고 기여 몫 | GA4는 매출의 {ga['ga4_sees_pct_of_revenue']:.0f}%만 봅니다. "
            f"검색에 {gch['search']['ga4_share_pct']:.0f}%를 주지만 실제 몫은 {gch['search']['incremental_share_pct']:.0f}%, "
            f"숏폼 영상은 {gch['short_video']['ga4_share_pct']:.0f}% vs {gch['short_video']['incremental_share_pct']:.0f}% |",
            "", "## 내년 예산 제안 (총액은 동일)", "", "| 채널 | 현재 (주당) | 제안 | 변화 |", "|---|---:|---:|---:|"]
@@ -289,10 +293,10 @@ def main():
     ko += ["", f"예상 추가 매출: 연 약 {eok(g['median'])} (90% 범위 {eok(g['ci90'][0])} ~ {eok(g['ci90'][1])}). "
            "모델이 확신하는 곳에서만 예산을 옮긴 안입니다.",
            "", "## 이익으로 따지면", "",
-           f"위 숫자는 모두 매출 기준입니다. 매출총이익률을 {GROSS_MARGIN:.0%}로 가정하면, 숏폼 영상은 새 고객이 평생 첫 구매의 "
-           f"{p_video['lifetime_multiple_needed_average']}배 이상 사면 광고비를 회수합니다. 지금보다 1원을 더 쓰는 경우에는 어느 채널이든 "
+           f"위 숫자는 모두 매출 기준입니다. 매출총이익률을 {GROSS_MARGIN:.0%}로 가정하면, 숏폼 영상은 새 고객의 평생 구매액이 첫 구매의 "
+           f"{p_video['lifetime_multiple_needed_average']}배 이상이면 광고비를 회수합니다. 지금보다 1원을 더 쓰는 경우에는 어느 채널이든 "
            f"{p_min_next}배 이상이 필요합니다. 실제 이익률과 재구매 데이터를 주시면 이익 기준으로 다시 계산하겠습니다.",
-           "", "## 측정은 할 만했나", "",
+           "", "## 측정할 가치가 있었나", "",
            f"지역 실험의 비용은 매출 기준 약 {eok(test_cost)}입니다(실험 뒤 2주 포함 잃은 매출 {eok(-cool['effect_krw_m'])} − 쓰지 않은 영상 광고비 "
            f"{eok(cool['video_withheld_krw_m'])}). 반면 이 측정으로 막거나 얻는 것은 해마다 그 몇 배입니다: 영상 4주 중단을 반복하면 잃을 매출 약 "
            f"{eok(-ci['effect_krw_m'])}, 검색 30% 증액을 유지했다면 1년 손실 약 {eok(up_waste_4w * 13)}, 재배분 기대 이득 연 약 {eok(final['predicted_gain_krw_m']['median'])}.",
@@ -304,7 +308,7 @@ def main():
            "", "## 부탁드릴 것", "",
            "- 실험 전에 미디어 플랜(예약 예산)을 공유해 주세요. 모든 효율 계산의 기준입니다.",
            "- 매출총이익률과 첫 구매 월별 재구매율을 공유해 주세요. 매출이 아니라 이익으로 판단할 수 있습니다.",
-           "- 실험 기간에 지역 프로모션이 있으면 알려 주세요. 이번 G26 지역 프로모션은 결과를 약 4분의 1 부풀릴 뻔했습니다.",
+           "- 실험 기간에 지역 프로모션이 있으면 알려 주세요. 이번 실험에서는 대조 지역 한 곳(G26)의 자체 프로모션이 결과를 약 4분의 1 부풀릴 뻔했습니다.",
            "- 실험 중에는 예산을 고정하고, 자사 주문 시스템의 일별 전체 매출을 보내 주세요.",
            f"- GA4를 Google Ads와 연결하고 향상된 전환과 동의 모드를 켜 주세요. 지금 GA4는 매출의 약 {ga['ga4_sees_pct_of_revenue']:.0f}%만 봅니다. "
            "신호가 좋아지면 자동 입찰과 다음 측정이 모두 정확해집니다."]
