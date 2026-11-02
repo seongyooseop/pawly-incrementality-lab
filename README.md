@@ -82,7 +82,7 @@ in [`docs/advertiser_readout_ko.md`](docs/advertiser_readout_ko.md).
 - **Social cannot be called.** The model puts social's return above what the platform reports; the truth puts it
   slightly below. Its interval contains the report, so the cross-platform view says "unclear" instead of guessing.
 
-Every problem the checks caught is in [`docs/ai_workflow_log.md`](docs/ai_workflow_log.md) (33 entries), including
+Every problem the checks caught is in [`docs/ai_workflow_log.md`](docs/ai_workflow_log.md) (34 entries), including
 an A/A test that showed the textbook TBR crying wolf 22% of the time.
 
 ## How the methods map to Google measurement tools
@@ -146,8 +146,9 @@ docs/               work log and advertiser readout
   interval was fixed with historical A/A tests. Trimmed Match, the pair-level estimator that trims outlier pairs
   automatically, is the more robust choice when pairs differ a lot; here the pair diagnostic and an advertiser check do
   that trimming by hand.
-- The GA4 export is simulated at channel level from stated rules (site share of sales, consent loss, how data-driven
-  credit differs from each platform's claim), not from user paths.
+- The GA4 export is simulated at channel level from the platforms' own claims with stated rules (site share of sales,
+  consent loss, a multiplier on each claim), not from user paths. The direction of its mix partly follows the platform
+  reports by construction: it shows how to read GA4 data, not an independent second proof.
 - Korea has few usable geo units. Real matched pairs would come from city and county (si-gun-gu) clusters, with Seoul
   and Gyeonggi hard to split, and regional sales need shipping addresses. Where pairs cannot be matched, the fallback
   is a user-level conversion lift study.

@@ -10,7 +10,7 @@
 - Short-form video pays back in sales: about KRW 1.2 of extra sales per won during the test (range 0.6-1.8), and about 1.5 counting the two weeks after it, when part of the effect lands. The 4-week summer pause cost about KRW 94M in sales (range KRW 30M-KRW 161M), not the KRW 245M a before/after view suggests.
 - The jump in reported search revenue after switching to AI auto-bidding (+93%) is almost entirely sales that were already happening, now credited to search. Total sales did not move (-0.2%, range -2.0% to +1.6%).
 - The 30% search budget increase that followed returned about KRW 0.15 per won (range -0.35 to 0.64): below break-even.
-- Added up, the platforms claim 1.3 times the sales that ads actually added. Short video is the only channel credited with less than it adds. At today's spend, the next won returns less than a won in every channel (model: 0.3-0.8), so shift budget first and then test a smaller total.
+- Added up, the platforms claim 1.3 times the sales that ads actually added. Short video is the only channel credited with less than it adds. Your own GA4, which counts each website sale once, points the same way: it gives search 63% of the paid credit against a 27% share of what ads added, and short video 13% against 48%. At today's spend, the next won returns less than a won in every channel (model: 0.3-0.8), so shift budget first and then test a smaller total.
 - In profit terms (gross margin assumed at 40%), short video pays back if a new customer's lifetime purchases reach 1.6x their first; the next won in any channel needs at least 3.2x. Your repeat-purchase data decides whether to add budget.
 
 ## What we measured
@@ -80,6 +80,7 @@ The geo test cost about KRW 27M in sales. Each decision it and the follow-up rea
 - Share gross margin and repeat-purchase rates by first-purchase month, so returns can be read as profit.
 - Tell us about regional promotions during a test (the G26 retail promotion would have inflated the result by about a quarter).
 - Keep budgets flat during tests, and send daily total sales from your own order system.
+- Link GA4 to Google Ads and turn on enhanced conversions and consent mode: GA4 sees about 47% of your sales today, and better signals help both automated bidding and the next study.
 
 ---
 

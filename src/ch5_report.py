@@ -48,6 +48,8 @@ def main():
     ci, au, bu = c2["causal_impact"], c3["total_sales_rdit"], c3["budget_increase"]
     final = c4["models"]["all_weeks"]["plans"]["risk_aware"]
     xp = load("cross_platform.json")["totals"]
+    ga = load("cross_platform.json")["ga4"]
+    gch = {r["channel"]: r for r in ga["channels"]}
     mr = {c: v["median"] for c, v in mr_all.items()}
     spend = c4["plan_weekly_spend_krw_m"]
     opt50 = d1["design_options"][0]
@@ -108,7 +110,9 @@ def main():
             f"The 30% search budget increase that followed returned about KRW {bu['marginal_iroas']:.2f} per won "
             f"(range {bu['marginal_iroas_ci'][0]:.2f} to {bu['marginal_iroas_ci'][1]:.2f}): below break-even.",
             f"Added up, the platforms claim {xp['claimed_vs_added']:.1f} times the sales that ads actually added. Short video is the "
-            f"only channel credited with less than it adds. At today's spend, the next won returns less than a won in every channel "
+            f"only channel credited with less than it adds. Your own GA4, which counts each website sale once, points the same way: "
+            f"it gives search {gch['search']['ga4_share_pct']:.0f}% of the paid credit against a {gch['search']['incremental_share_pct']:.0f}% share of "
+            f"what ads added, and short video {gch['short_video']['ga4_share_pct']:.0f}% against {gch['short_video']['incremental_share_pct']:.0f}%. At today's spend, the next won returns less than a won in every channel "
             f"(model: {min(mr.values()):.1f}-{max(mr.values()):.1f}), so shift budget first and then test a smaller total.",
             f"In profit terms (gross margin assumed at {GROSS_MARGIN:.0%}), short video pays back if a new customer's lifetime "
             f"purchases reach {p_video['lifetime_multiple_needed_average']}x their first; the next won in any channel needs at least "
@@ -188,6 +192,8 @@ def main():
             "Share gross margin and repeat-purchase rates by first-purchase month, so returns can be read as profit.",
             "Tell us about regional promotions during a test (the G26 retail promotion would have inflated the result by about a quarter).",
             "Keep budgets flat during tests, and send daily total sales from your own order system.",
+            f"Link GA4 to Google Ads and turn on enhanced conversions and consent mode: GA4 sees about {ga['ga4_sees_pct_of_revenue']:.0f}% of "
+            "your sales today, and better signals help both automated bidding and the next study.",
         ],
         "account_team_notes": [
             f"Growth opportunity: short video +{budget[1]['change_pct']}% is about {m(video_extra_year)} more video spend a year, "
@@ -275,6 +281,9 @@ def main():
            f"(단순 전후 비교의 {eok(-c2['naive_before_after']['effect_krw_m'])}은 여름 비수기까지 포함한 과대 추정) |",
            f"| 자동 입찰이 매출을 늘렸나? | 전환 시점 전후 전체 매출 비교 + 과거 456일과 비교 | 변화 없음({au['jump_pct']:+.1f}%) |",
            f"| 플랫폼 화면 숫자는 믿을 만한가? | 플랫폼별 보고 매출 합계 vs 실제 광고 기여 | 보고가 실제의 {xp['claimed_vs_added']:.1f}배 |",
+           f"| 우리 GA4 숫자는? | GA4가 채널에 나눠 준 몫 vs 실제 광고 기여 몫 | GA4는 매출의 {ga['ga4_sees_pct_of_revenue']:.0f}%만 봅니다. "
+           f"검색에 {gch['search']['ga4_share_pct']:.0f}%를 주지만 실제 몫은 {gch['search']['incremental_share_pct']:.0f}%, "
+           f"숏폼 영상은 {gch['short_video']['ga4_share_pct']:.0f}% vs {gch['short_video']['incremental_share_pct']:.0f}% |",
            "", "## 내년 예산 제안 (총액은 동일)", "", "| 채널 | 현재 (주당) | 제안 | 변화 |", "|---|---:|---:|---:|"]
     ko += [f"| {b['channel_ko']} | {eok(b['now_krw_m_per_week'])} | {eok(b['proposed_krw_m_per_week'])} | {b['change_pct']:+d}% |" for b in budget]
     ko += ["", f"예상 추가 매출: 연 약 {eok(g['median'])} (90% 범위 {eok(g['ci90'][0])} ~ {eok(g['ci90'][1])}). "
@@ -296,7 +305,9 @@ def main():
            "- 실험 전에 미디어 플랜(예약 예산)을 공유해 주세요. 모든 효율 계산의 기준입니다.",
            "- 매출총이익률과 첫 구매 월별 재구매율을 공유해 주세요. 매출이 아니라 이익으로 판단할 수 있습니다.",
            "- 실험 기간에 지역 프로모션이 있으면 알려 주세요. 이번 G26 지역 프로모션은 결과를 약 4분의 1 부풀릴 뻔했습니다.",
-           "- 실험 중에는 예산을 고정하고, 자사 주문 시스템의 일별 전체 매출을 보내 주세요."]
+           "- 실험 중에는 예산을 고정하고, 자사 주문 시스템의 일별 전체 매출을 보내 주세요.",
+           f"- GA4를 Google Ads와 연결하고 향상된 전환과 동의 모드를 켜 주세요. 지금 GA4는 매출의 약 {ga['ga4_sees_pct_of_revenue']:.0f}%만 봅니다. "
+           "신호가 좋아지면 자동 입찰과 다음 측정이 모두 정확해집니다."]
     (ROOT / "docs" / "advertiser_readout_ko.md").write_text("\n".join(ko) + "\n", encoding="utf-8")
     print("\n".join(md[:20]))
     print("\n".join(ko[:12]))
