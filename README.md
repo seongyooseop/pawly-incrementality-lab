@@ -11,7 +11,7 @@ Why incrementality now: consent choices and app tracking limits hide a growing s
 bidding reports results the advertiser cannot audit. Click-based reports drift away from what ads add; experiments and
 models built on total sales are the check.
 
-**Live demo:** https://seongyooseop.github.io/pawly-incrementality-lab/site/ (or open `site/index.html`: one
+**Live demo (interactive dashboard):** https://seongyooseop.github.io/pawly-incrementality-lab/site/ (or open `site/index.html`: one
 self-contained file, seven tabs, each with a "How to read this tab" guide).
 
 ## At a glance
@@ -25,7 +25,8 @@ self-contained file, seven tabs, each with a "How to read this tab" guide).
 | Every platform claims the sale. Whose numbers? | Cross-platform: platform claims vs calibrated MMM | Claims add up to KRW 6.9B | Ads added **KRW 5.3B** (4.1-7.0B): claims are **1.3x** what ads added | 1.4x |
 | How to split next year's budget? | Response curves, marginal ROI, plans run through the true world | - | Next won returns under a won in every channel; risk-aware plan keeps **64%** of the best possible gain | marginal ROI 0.3-0.8 |
 
-All 11 headline intervals contain the truth. The advertiser readout is in
+All 11 headline intervals contain the truth. Every readout states whether the uplift is statistically significant
+(whether its interval excludes zero) and the smallest effect the study could detect (MDE). The advertiser readout is in
 [`docs/advertiser_readout.md`](docs/advertiser_readout.md), with a plain-language Korean version for the advertiser
 in [`docs/advertiser_readout_ko.md`](docs/advertiser_readout_ko.md).
 
@@ -53,7 +54,7 @@ in [`docs/advertiser_readout_ko.md`](docs/advertiser_readout_ko.md).
    terms. A cross-platform view sets each platform's self-reported revenue against what it added: short video is the
    only channel credited with less than it adds; search and retargeting are credited 3-4 times their contribution.
    The same check on the advertiser's GA4 data (data-driven attribution, own site only): GA4 sees 47% of sales and
-   gives search 63% of the paid credit against a 27% share of what ads added; short video gets 13% against 48%.
+   gives search 63% of the paid credit against a 27% share of what ads added; short video gets 13% against 48%: the media-mix headroom.
    Marginal ROI at today's budget, response curves, then reallocations run through the true world. A model check that
    needs no truth: convergence, a forecast for 12 weeks the model never saw, and whether a refit repairs it.
 5. **Advertiser readout.** Bottom line, confidence, next year's budget, what the returns mean in profit (the repeat
