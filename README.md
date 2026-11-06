@@ -83,7 +83,7 @@ in [`docs/advertiser_readout_ko.md`](docs/advertiser_readout_ko.md).
 - **Social cannot be called.** The model puts social's return above what the platform reports; the truth puts it
   slightly below. Its interval contains the report, so the cross-platform view says "unclear" instead of guessing.
 
-Every problem the checks caught is in [`docs/ai_workflow_log.md`](docs/ai_workflow_log.md) (34 entries), including
+Every problem the checks caught is in [`docs/work_log.md`](docs/work_log.md) (34 entries), including
 an A/A test that showed the textbook TBR flagging an effect that wasn't there 22% of the time.
 
 ## How the methods map to Google measurement tools
@@ -155,4 +155,4 @@ docs/               work log and advertiser readout
   is a user-level conversion lift study.
 - The world is mine, so the methods were tested against problems I chose. The work log records where a method failed
   a check and what changed, including results that came out differently from the plan.
-- Built with Claude Code; every number on the page is produced by the scripts above.
+- Every number on the page is produced by the scripts above.

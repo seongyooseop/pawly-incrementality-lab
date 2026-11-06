@@ -259,7 +259,7 @@ def bau_plan(world: World, seed: int = PLAN_SEED) -> Plan:
     Search budgets rise when video runs (marketers push both together; weekly
     correlation 0.85), so an observational MMM struggles to separate the two
     (trap 3). In this world it left search the least certain channel rather
-    than over-crediting it; see docs/ai_workflow_log.md, entry 11.
+    than over-crediting it; see docs/work_log.md, entry 11.
     """
     rng = np.random.default_rng(seed)
     n_weeks = N_DAYS // 7

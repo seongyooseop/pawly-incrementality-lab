@@ -12,7 +12,7 @@ OUT = ROOT / "outputs"
 
 
 def worklog():
-    text = (ROOT / "docs" / "ai_workflow_log.md").read_text(encoding="utf-8")
+    text = (ROOT / "docs" / "work_log.md").read_text(encoding="utf-8")
     entries = re.findall(r"\*\*(\d+\. [^*]+)\*\*\n(.+?)(?=\n\n|\Z)", text, flags=re.S)
     return [{"title": t.strip(), "body": b.strip().replace("\n", " ")} for t, b in entries]
 

@@ -1,6 +1,6 @@
-# AI workflow log
+# Work log
 
-Built with Claude Code. Each entry is a problem a check caught, what caused it, and the fix. The checks matter more than the code: every number on the page has to survive them.
+Each entry is a problem a check caught, what caused it, and the fix. The checks matter more than the code: every number on the page has to survive them.
 
 ## Day 1 — world and geo test design (2026-10-31)
 

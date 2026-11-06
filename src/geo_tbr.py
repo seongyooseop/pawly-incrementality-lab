@@ -5,7 +5,7 @@ totals in the pre-period, predicts what the treatment group would have done in
 the test period, and reads the cumulative gap as the causal effect.
 
 Two changes from the textbook fit, both found by A/A tests on PAWLY's history
-(see docs/ai_workflow_log.md):
+(see docs/work_log.md):
   * No intercept (proportional form). With an intercept, daily noise in the
     control total flattens the slope (regression dilution); whenever revenue
     grows between pre-period and test, the prediction lags and a fake positive
